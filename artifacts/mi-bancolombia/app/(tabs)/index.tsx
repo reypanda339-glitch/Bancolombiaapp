@@ -46,7 +46,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
-            source={require("../../assets/images/bancolombia_icon.png")}
+            source={require("../../assets/images/mi_bancolombia_icon.png")}
             style={styles.headerLogo}
             resizeMode="contain"
           />

@@ -187,7 +187,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [balanceVisible, setBalanceVisible] = useState(true);
 
   const login = useCallback(async (pin: string): Promise<boolean> => {
-    if (pin === "1234" || pin.length === 4) {
+    if (pin === "1234") {
       setIsAuthenticated(true);
       await AsyncStorage.setItem("auth", "true");
       return true;

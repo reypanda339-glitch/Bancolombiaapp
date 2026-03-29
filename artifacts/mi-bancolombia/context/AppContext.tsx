@@ -6,15 +6,19 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import type { DocType } from "@/constants/countries";
+import { getCountryByCode } from "@/constants/countries";
 
 export type ThemeMode = "system" | "light" | "dark";
 
-export type DocumentType = "CC" | "CE" | "NIT" | "PA" | "TI" | "RC";
-
 export type RegisteredUser = {
   id: string;
-  documentType: DocumentType;
+  documentType: DocType;
   documentNumber: string;
+  countryResidence: string;
+  countryBirth: string;
+  currencyCode: string;
+  currencySymbol: string;
   firstName: string;
   secondName: string;
   lastName: string;
@@ -32,6 +36,8 @@ export type Account = {
   number: string;
   balance: number;
   currency: string;
+  currencyCode: string;
+  currencySymbol: string;
   name: string;
 };
 
@@ -78,65 +84,73 @@ type AppContextType = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const DEMO_ACCOUNTS: Account[] = [
-  {
-    id: "acc1",
-    type: "savings",
-    number: "****4521",
-    balance: 4850000,
-    currency: "COP",
-    name: "Cuenta de Ahorros",
-  },
-  {
-    id: "acc2",
-    type: "checking",
-    number: "****8834",
-    balance: 1250000,
-    currency: "COP",
-    name: "Cuenta Corriente",
-  },
+  { id: "acc1", type: "savings",  number: "****4521", balance: 4850000, currency: "Peso colombiano",     currencyCode: "COP", currencySymbol: "$",  name: "Cuenta de Ahorros"  },
+  { id: "acc2", type: "checking", number: "****8834", balance: 1250000, currency: "Peso colombiano",     currencyCode: "COP", currencySymbol: "$",  name: "Cuenta Corriente"   },
 ];
 
 const DEMO_TRANSACTIONS: Transaction[] = [
-  { id: "t1", date: "2026-03-28", description: "Éxito Supermercado", amount: -87500, type: "debit", category: "Compras", accountId: "acc1", status: "completed" },
-  { id: "t2", date: "2026-03-27", description: "Nómina Empresa ABC", amount: 3500000, type: "credit", category: "Ingresos", accountId: "acc1", status: "completed" },
-  { id: "t3", date: "2026-03-27", description: "Netflix", amount: -52900, type: "debit", category: "Entretenimiento", accountId: "acc1", status: "completed" },
-  { id: "t4", date: "2026-03-26", description: "Transferencia a Juan", amount: -200000, type: "debit", category: "Transferencias", accountId: "acc1", status: "completed" },
-  { id: "t5", date: "2026-03-26", description: "Recaudo EPM", amount: -145000, type: "debit", category: "Servicios", accountId: "acc1", status: "completed" },
-  { id: "t6", date: "2026-03-25", description: "Rappi Colombia", amount: -35900, type: "debit", category: "Alimentación", accountId: "acc1", status: "completed" },
-  { id: "t7", date: "2026-03-25", description: "Transferencia recibida", amount: 500000, type: "credit", category: "Transferencias", accountId: "acc1", status: "completed" },
-  { id: "t8", date: "2026-03-24", description: "Gasolina Shell", amount: -120000, type: "debit", category: "Transporte", accountId: "acc1", status: "completed" },
+  { id: "t1", date: "2026-03-28", description: "Éxito Supermercado",     amount: -87500,   type: "debit",  category: "Compras",       accountId: "acc1", status: "completed" },
+  { id: "t2", date: "2026-03-27", description: "Nómina Empresa ABC",     amount: 3500000,  type: "credit", category: "Ingresos",      accountId: "acc1", status: "completed" },
+  { id: "t3", date: "2026-03-27", description: "Netflix",                amount: -52900,   type: "debit",  category: "Entretenimiento",accountId: "acc1",status: "completed" },
+  { id: "t4", date: "2026-03-26", description: "Transferencia a Juan",   amount: -200000,  type: "debit",  category: "Transferencias",accountId: "acc1", status: "completed" },
+  { id: "t5", date: "2026-03-26", description: "Recaudo EPM",            amount: -145000,  type: "debit",  category: "Servicios",     accountId: "acc1", status: "completed" },
+  { id: "t6", date: "2026-03-25", description: "Rappi Colombia",         amount: -35900,   type: "debit",  category: "Alimentación",  accountId: "acc1", status: "completed" },
+  { id: "t7", date: "2026-03-25", description: "Transferencia recibida", amount: 500000,   type: "credit", category: "Transferencias",accountId: "acc1", status: "completed" },
+  { id: "t8", date: "2026-03-24", description: "Gasolina Shell",         amount: -120000,  type: "debit",  category: "Transporte",    accountId: "acc1", status: "completed" },
 ];
 
 const DEMO_CARDS: Card[] = [
-  { id: "card1", type: "debit", number: "4521 **** **** 3842", expiry: "12/27", holder: "CARLOS HERNANDEZ", brand: "visa", balance: 4850000, color: "#1C1C1E", active: true },
+  { id: "card1", type: "debit",  number: "4521 **** **** 3842", expiry: "12/27", holder: "CARLOS HERNANDEZ", brand: "visa",       balance: 4850000, color: "#1C1C1E",  active: true  },
   { id: "card2", type: "credit", number: "5412 **** **** 9076", expiry: "08/28", holder: "CARLOS HERNANDEZ", brand: "mastercard", balance: 1200000, limit: 5000000, color: "#FDDA24", active: true },
 ];
 
-const ZERO_ACCOUNTS = (name: string): Account[] => [
-  { id: "acc1", type: "savings", number: "****0001", balance: 0, currency: "COP", name: "Cuenta de Ahorros" },
-];
+function zeroAccounts(user: RegisteredUser): Account[] {
+  const c = getCountryByCode(user.countryResidence);
+  return [
+    {
+      id: "acc1",
+      type: "savings",
+      number: "****0001",
+      balance: 0,
+      currency: c?.currency ?? user.currencyCode,
+      currencyCode: user.currencyCode,
+      currencySymbol: user.currencySymbol,
+      name: "Cuenta de Ahorros",
+    },
+  ];
+}
 
-const ZERO_CARDS = (holder: string): Card[] => [
-  { id: "card1", type: "debit", number: "**** **** **** ****", expiry: "--/--", holder: holder.toUpperCase(), brand: "visa", balance: 0, color: "#1C1C1E", active: true },
-];
+function zeroCards(user: RegisteredUser): Card[] {
+  return [
+    {
+      id: "card1",
+      type: "debit",
+      number: "**** **** **** ****",
+      expiry: "--/--",
+      holder: `${user.firstName} ${user.lastName}`.toUpperCase(),
+      brand: "visa",
+      balance: 0,
+      color: "#1C1C1E",
+      active: true,
+    },
+  ];
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
   const [currentUser, setCurrentUser] = useState<RegisteredUser | null>(null);
-  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
 
   useEffect(() => {
     (async () => {
-      const auth = await AsyncStorage.getItem("auth");
-      const theme = await AsyncStorage.getItem("themeMode") as ThemeMode | null;
-      const usersJson = await AsyncStorage.getItem("registeredUsers");
-      const currentUserJson = await AsyncStorage.getItem("currentUser");
-
-      if (theme) setThemeModeState(theme);
-      if (usersJson) setRegisteredUsers(JSON.parse(usersJson));
-      if (currentUserJson) setCurrentUser(JSON.parse(currentUserJson));
+      const [auth, theme, userJson] = await Promise.all([
+        AsyncStorage.getItem("auth"),
+        AsyncStorage.getItem("themeMode"),
+        AsyncStorage.getItem("currentUser"),
+      ]);
+      if (theme) setThemeModeState(theme as ThemeMode);
+      if (userJson) setCurrentUser(JSON.parse(userJson));
       if (auth === "true") setIsAuthenticated(true);
     })();
   }, []);
@@ -144,8 +158,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (pin: string): Promise<boolean> => {
     const usersJson = await AsyncStorage.getItem("registeredUsers");
     const users: RegisteredUser[] = usersJson ? JSON.parse(usersJson) : [];
-
     const matched = users.find((u) => u.pin === pin);
+
     if (matched) {
       setIsAuthenticated(true);
       setCurrentUser(matched);
@@ -153,7 +167,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.setItem("currentUser", JSON.stringify(matched));
       return true;
     }
-
     if (pin === "1234") {
       setIsAuthenticated(true);
       setCurrentUser(null);
@@ -161,7 +174,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.removeItem("currentUser");
       return true;
     }
-
     return false;
   }, []);
 
@@ -173,16 +185,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: Omit<RegisteredUser, "id" | "createdAt">) => {
-    const newUser: RegisteredUser = {
-      ...data,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
+    const newUser: RegisteredUser = { ...data, id: Date.now().toString(), createdAt: new Date().toISOString() };
     const usersJson = await AsyncStorage.getItem("registeredUsers");
     const users: RegisteredUser[] = usersJson ? JSON.parse(usersJson) : [];
-    const updated = [...users, newUser];
-    await AsyncStorage.setItem("registeredUsers", JSON.stringify(updated));
-    setRegisteredUsers(updated);
+    await AsyncStorage.setItem("registeredUsers", JSON.stringify([...users, newUser]));
   }, []);
 
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
@@ -190,19 +196,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("themeMode", mode);
   }, []);
 
-  const toggleBalanceVisible = useCallback(() => {
-    setBalanceVisible((v) => !v);
-  }, []);
+  const toggleBalanceVisible = useCallback(() => setBalanceVisible((v) => !v), []);
 
-  const displayName = currentUser
-    ? currentUser.firstName
-    : "Carlos";
-
-  const accounts = currentUser ? ZERO_ACCOUNTS(displayName) : DEMO_ACCOUNTS;
+  const displayName  = currentUser?.firstName ?? "Carlos";
+  const accounts     = currentUser ? zeroAccounts(currentUser) : DEMO_ACCOUNTS;
   const transactions = currentUser ? [] : DEMO_TRANSACTIONS;
-  const cards = currentUser
-    ? ZERO_CARDS(`${currentUser.firstName} ${currentUser.lastName}`)
-    : DEMO_CARDS;
+  const cards        = currentUser ? zeroCards(currentUser)    : DEMO_CARDS;
 
   return (
     <AppContext.Provider

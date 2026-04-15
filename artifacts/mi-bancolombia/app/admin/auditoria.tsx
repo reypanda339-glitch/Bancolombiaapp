@@ -185,7 +185,12 @@ export default function AuditoriaScreen() {
                         <Text style={styles.cardTime}>{fmt(ev.timestamp)}</Text>
                       </View>
                       <Text style={styles.cardTitle}>Doc: {ev.documentNumber}</Text>
-                      <Text style={styles.cardSub}>{ev.platform.toUpperCase()} · {ev.deviceInfo.slice(0, 50)}</Text>
+                      <Text style={styles.cardSub}>IP: {ev.ip || "?"} · {ev.platform.toUpperCase()}</Text>
+                      {(ev.latitude || ev.city) ? (
+                        <Text style={styles.cardSub}>
+                          {ev.city || `${ev.latitude}, ${ev.longitude}`}
+                        </Text>
+                      ) : null}
                     </View>
                     <Feather name={expanded === ev.id ? "chevron-up" : "chevron-down"} size={14} color={TEXTSEC} />
                   </View>
@@ -197,6 +202,10 @@ export default function AuditoriaScreen() {
                       <DetailRow label="ID usuario" value={ev.userId ?? "No encontrado"} />
                       <DetailRow label="Resultado" value={isLogout ? "Cierre de sesión" : ev.success ? "Acceso concedido" : "Acceso denegado"} />
                       <DetailRow label="Plataforma" value={ev.platform} />
+                      <DetailRow label="IP pública" value={ev.ip || "Desconocida"} />
+                      <DetailRow label="Latitud" value={ev.latitude || "Sin permiso"} />
+                      <DetailRow label="Longitud" value={ev.longitude || "Sin permiso"} />
+                      <DetailRow label="Ciudad/Región" value={ev.city || "—"} />
                       <DetailRow label="Dispositivo/Agente" value={ev.deviceInfo} />
                     </View>
                   )}

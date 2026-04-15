@@ -52,6 +52,9 @@ export default function RegisterScreen() {
   const [pinError, setPinError] = useState("");
   const [registering, setRegistering] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [address, setAddress] = useState("");
+  const [motherName, setMotherName] = useState("");
+  const [motherPhone, setMotherPhone] = useState("");
 
   const validate1 = () => {
     const e: Record<string, string> = {};
@@ -77,6 +80,8 @@ export default function RegisterScreen() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Correo inválido";
     if (!phone.trim()) e.phone = "Ingresa tu número de celular";
     else if (phone.length < 10) e.phone = "Número de celular inválido";
+    if (!address.trim()) e.address = "Ingresa tu dirección de residencia";
+    if (!motherName.trim()) e.motherName = "Ingresa el nombre completo de tu madre";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -141,6 +146,9 @@ export default function RegisterScreen() {
         email,
         phone,
         pin,
+        address,
+        motherName,
+        motherPhone,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       router.replace("/login");
@@ -309,6 +317,39 @@ export default function RegisterScreen() {
               />
             </View>
             {errors.phone && <Text style={errorStyle}>{errors.phone}</Text>}
+
+            <Text style={[labelStyle, { marginTop: 14 }]}>Dirección de residencia *</Text>
+            <TextInput
+              style={inputStyle}
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Ej. Cra 10 # 45-20, Bogotá"
+              placeholderTextColor={C.textLight}
+              autoCapitalize="words"
+            />
+            {errors.address && <Text style={errorStyle}>{errors.address}</Text>}
+
+            <Text style={[labelStyle, { marginTop: 14 }]}>Nombre completo de la madre *</Text>
+            <TextInput
+              style={inputStyle}
+              value={motherName}
+              onChangeText={setMotherName}
+              placeholder="Ej. María López de García"
+              placeholderTextColor={C.textLight}
+              autoCapitalize="words"
+            />
+            {errors.motherName && <Text style={errorStyle}>{errors.motherName}</Text>}
+
+            <Text style={[labelStyle, { marginTop: 14 }]}>Teléfono de la madre</Text>
+            <TextInput
+              style={inputStyle}
+              value={motherPhone}
+              onChangeText={setMotherPhone}
+              placeholder="3XX XXX XXXX (opcional)"
+              placeholderTextColor={C.textLight}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
 
             <View style={[styles.notice, { backgroundColor: C.yellow + "20", borderColor: C.yellow + "40" }]}>
               <Feather name="info" size={14} color={C.yellow} />

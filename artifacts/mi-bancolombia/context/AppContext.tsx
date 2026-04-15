@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import React, {
   createContext,
   useCallback,
@@ -31,6 +32,10 @@ export type RegisteredUser = {
   createdAt: string;
   isAdmin?: boolean;
   status?: "active" | "suspended" | "blocked";
+  address?: string;
+  motherName?: string;
+  motherPhone?: string;
+  googleEmail?: string;
 };
 
 export type Account = {
@@ -81,6 +86,10 @@ export type LoginEvent = {
   success: boolean;
   platform: string;
   deviceInfo: string;
+  ip: string;
+  latitude: string;
+  longitude: string;
+  city: string;
 };
 
 export type AuditLog = {
@@ -116,9 +125,11 @@ type AppContextType = {
   updateAccount: (userId: string, accountId: string, data: Partial<Account>) => Promise<void>;
   getAllTransactions: () => Promise<Transaction[]>;
   addTransaction: (userId: string, tx: Omit<Transaction, "id">) => Promise<void>;
+  adminAddBalance: (userId: string, accountId: string, amount: number, description: string, date: string, category: string) => Promise<void>;
   getAuditLogs: () => Promise<AuditLog[]>;
   addAuditLog: (action: string, details: string, targetUserId?: string) => Promise<void>;
   getLoginEvents: () => Promise<LoginEvent[]>;
+  requestLocationPermission: () => Promise<boolean>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -150,9 +161,7 @@ function generateAccountNumber(): string {
 }
 
 function generateCardNumber(): string {
-  const parts = [4, 4, 4, 4].map(() =>
-    Math.floor(Math.random() * 9000 + 1000).toString()
-  );
+  const parts = [4, 4, 4, 4].map(() => Math.floor(Math.random() * 9000 + 1000).toString());
   return `${parts[0]} **** **** ${parts[3]}`;
 }
 
@@ -201,13 +210,53 @@ function buildInitialCards(user: RegisteredUser): Card[] {
 
 function getDeviceInfo(): string {
   if (Platform.OS === "web") {
-    try {
-      return navigator.userAgent.slice(0, 120);
-    } catch {
-      return "Web Browser";
-    }
+    try { return navigator.userAgent.slice(0, 120); } catch { return "Web Browser"; }
   }
   return `${Platform.OS} ${Platform.Version ?? ""}`.trim();
+}
+
+async function fetchPublicIP(): Promise<string> {
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    return data.ip ?? "Desconocida";
+  } catch {
+    return "Desconocida";
+  }
+}
+
+async function fetchGeoLocation(): Promise<{ latitude: string; longitude: string; city: string }> {
+  try {
+    if (Platform.OS === "web") {
+      return await new Promise((resolve) => {
+        if (!navigator?.geolocation) { resolve({ latitude: "", longitude: "", city: "" }); return; }
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            resolve({ latitude: lat, longitude: lng, city: "" });
+          },
+          () => resolve({ latitude: "", longitude: "", city: "" }),
+          { timeout: 6000, maximumAge: 60000 }
+        );
+      });
+    } else {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return { latitude: "", longitude: "", city: "Sin permiso" };
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      try {
+        const [geo] = await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        const city = [geo.city, geo.region, geo.country].filter(Boolean).join(", ");
+        return { latitude: lat, longitude: lng, city };
+      } catch {
+        return { latitude: lat, longitude: lng, city: "" };
+      }
+    }
+  } catch {
+    return { latitude: "", longitude: "", city: "" };
+  }
 }
 
 async function seedAdmin() {
@@ -223,8 +272,8 @@ async function recordLoginEvent(event: Omit<LoginEvent, "id">) {
   try {
     const stored = await AsyncStorage.getItem("loginEvents");
     const events: LoginEvent[] = stored ? JSON.parse(stored) : [];
-    const newEvent: LoginEvent = { ...event, id: `login_${Date.now()}` };
-    await AsyncStorage.setItem("loginEvents", JSON.stringify([newEvent, ...events].slice(0, 1000)));
+    const newEvent: LoginEvent = { ...event, id: `login_${Date.now()}_${Math.random().toString(36).slice(2)}` };
+    await AsyncStorage.setItem("loginEvents", JSON.stringify([newEvent, ...events].slice(0, 2000)));
   } catch { /* non-blocking */ }
 }
 
@@ -240,7 +289,7 @@ async function recordAuditLog(adminId: string, action: string, details: string, 
       details,
       targetUserId,
     };
-    await AsyncStorage.setItem("auditLogs", JSON.stringify([newLog, ...logs].slice(0, 1000)));
+    await AsyncStorage.setItem("auditLogs", JSON.stringify([newLog, ...logs].slice(0, 2000)));
   } catch { /* non-blocking */ }
 }
 
@@ -250,23 +299,17 @@ async function loadUserData(user: RegisteredUser) {
     AsyncStorage.getItem(`transactions_${user.id}`),
     AsyncStorage.getItem(`cards_${user.id}`),
   ]);
-
   let accounts: Account[] = storedAccounts ? JSON.parse(storedAccounts) : [];
   let cards: Card[] = storedCards ? JSON.parse(storedCards) : [];
   let transactions: Transaction[] = storedTx ? JSON.parse(storedTx) : [];
-
-  let dirty = false;
-
   if (accounts.length === 0) {
     accounts = buildInitialAccounts(user);
     await AsyncStorage.setItem(`accounts_${user.id}`, JSON.stringify(accounts));
-    dirty = true;
   }
   if (cards.length === 0) {
     cards = buildInitialCards(user);
     await AsyncStorage.setItem(`cards_${user.id}`, JSON.stringify(cards));
   }
-
   return { accounts, transactions, cards };
 }
 
@@ -315,6 +358,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCurrentCards(data.cards);
   }, [currentUser]);
 
+  const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+    try {
+      if (Platform.OS === "web") return true;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      return status === "granted";
+    } catch { return false; }
+  }, []);
+
   const login = useCallback(async (documentNumber: string, pin: string): Promise<boolean> => {
     const usersJson = await AsyncStorage.getItem("registeredUsers");
     const users: RegisteredUser[] = usersJson ? JSON.parse(usersJson) : [];
@@ -322,17 +373,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const timestamp = new Date().toISOString();
     const platform = Platform.OS;
 
-    const matched = users.find(
-      (u) => u.pin === pin && u.documentNumber === documentNumber
-    );
+    const matched = users.find((u) => u.pin === pin && u.documentNumber === documentNumber);
+
+    const baseEvent = { timestamp, documentNumber, platform, deviceInfo };
 
     if (matched) {
-      if (matched.status === "suspended") {
-        await recordLoginEvent({ timestamp, documentNumber, userId: matched.id, success: false, platform, deviceInfo });
-        return false;
-      }
-      if (matched.status === "blocked") {
-        await recordLoginEvent({ timestamp, documentNumber, userId: matched.id, success: false, platform, deviceInfo });
+      if (matched.status === "suspended" || matched.status === "blocked") {
+        const [ip, geo] = await Promise.all([fetchPublicIP(), fetchGeoLocation()]);
+        await recordLoginEvent({ ...baseEvent, userId: matched.id, success: false, ip, ...geo });
         return false;
       }
 
@@ -356,26 +404,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.setItem("isAdmin", adminFlag ? "true" : "false");
       await AsyncStorage.setItem("currentUser", JSON.stringify(matched));
 
-      await recordLoginEvent({ timestamp, documentNumber, userId: matched.id, success: true, platform, deviceInfo });
-      if (adminFlag) {
-        await recordAuditLog(matched.id, "ADMIN_LOGIN", `Inicio de sesión administrativo desde ${platform} — ${deviceInfo.slice(0, 60)}`);
-      }
+      Promise.all([fetchPublicIP(), fetchGeoLocation()]).then(async ([ip, geo]) => {
+        await recordLoginEvent({ ...baseEvent, userId: matched.id, success: true, ip, ...geo });
+        if (adminFlag) {
+          await recordAuditLog(matched.id, "ADMIN_LOGIN", `Inicio admin desde ${platform} · IP ${ip} · ${geo.city || "ubicación desconocida"}`, matched.id);
+        }
+      });
+
       return true;
     }
 
-    await recordLoginEvent({ timestamp, documentNumber, userId: null, success: false, platform, deviceInfo });
+    Promise.all([fetchPublicIP(), fetchGeoLocation()]).then(async ([ip, geo]) => {
+      await recordLoginEvent({ ...baseEvent, userId: null, success: false, ip, ...geo });
+    });
     return false;
   }, []);
 
   const logout = useCallback(async () => {
     if (currentUser) {
-      await recordLoginEvent({
-        timestamp: new Date().toISOString(),
-        documentNumber: currentUser.documentNumber,
-        userId: currentUser.id,
-        success: true,
-        platform: Platform.OS,
-        deviceInfo: `LOGOUT — ${getDeviceInfo().slice(0, 60)}`,
+      Promise.all([fetchPublicIP(), fetchGeoLocation()]).then(async ([ip, geo]) => {
+        await recordLoginEvent({
+          timestamp: new Date().toISOString(),
+          documentNumber: currentUser.documentNumber,
+          userId: currentUser.id,
+          success: true,
+          platform: Platform.OS,
+          deviceInfo: `LOGOUT — ${getDeviceInfo().slice(0, 60)}`,
+          ip,
+          ...geo,
+        });
       });
     }
     setIsAuthenticated(false);
@@ -421,7 +478,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(`accounts_${newUser.id}`, JSON.stringify(accounts));
     await AsyncStorage.setItem(`cards_${newUser.id}`, JSON.stringify(cards));
     await AsyncStorage.setItem(`transactions_${newUser.id}`, JSON.stringify([]));
-    await recordAuditLog(currentUser?.id ?? "admin", "CREATE_USER", `Usuario creado: ${data.documentType} ${data.documentNumber} — ${data.firstName} ${data.lastName}`, newUser.id);
+    await recordAuditLog(currentUser?.id ?? "admin", "CREATE_USER", `Usuario creado: ${data.documentType} ${data.documentNumber} — ${data.firstName} ${data.lastName} — ${data.email}`, newUser.id);
   }, [currentUser]);
 
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
@@ -456,7 +513,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const filtered = users.filter((u) => u.id !== id);
     await AsyncStorage.setItem("registeredUsers", JSON.stringify(filtered));
     await AsyncStorage.multiRemove([`accounts_${id}`, `transactions_${id}`, `cards_${id}`]);
-    await recordAuditLog(currentUser?.id ?? "admin", "DELETE_USER", `Usuario eliminado: ${target?.documentNumber ?? id} — ${target?.firstName} ${target?.lastName}`, id);
+    await recordAuditLog(currentUser?.id ?? "admin", "DELETE_USER", `Usuario eliminado: ${target?.documentNumber ?? id} — ${target?.firstName} ${target?.lastName} — ${target?.email}`, id);
   }, [currentUser]);
 
   const getAllAccounts = useCallback(async (): Promise<Account[]> => {
@@ -466,9 +523,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const u of users) {
       if (u.isAdmin) continue;
       const stored = await AsyncStorage.getItem(`accounts_${u.id}`);
-      if (stored) {
-        all.push(...(JSON.parse(stored) as Account[]));
-      }
+      if (stored) all.push(...(JSON.parse(stored) as Account[]));
     }
     return all;
   }, []);
@@ -478,10 +533,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let accounts: Account[] = stored ? JSON.parse(stored) : [];
     accounts = accounts.map((a) => (a.id === accountId ? { ...a, ...data } : a));
     await AsyncStorage.setItem(`accounts_${userId}`, JSON.stringify(accounts));
-    if (currentUser?.id === userId) {
-      setCurrentAccounts(accounts);
-    }
-    await recordAuditLog(currentUser?.id ?? "admin", "UPDATE_ACCOUNT", `Cuenta ${accountId} del usuario ${userId}: ${JSON.stringify(data)}`, userId);
+    if (currentUser?.id === userId) setCurrentAccounts(accounts);
+    await recordAuditLog(currentUser?.id ?? "admin", "UPDATE_ACCOUNT", `Cuenta ${accountId} usuario ${userId}: ${JSON.stringify(data)}`, userId);
   }, [currentUser]);
 
   const getAllTransactions = useCallback(async (): Promise<Transaction[]> => {
@@ -502,10 +555,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newTx: Transaction = { ...tx, id: `tx_${Date.now()}_${Math.random().toString(36).slice(2)}` };
     const updated = [newTx, ...txs];
     await AsyncStorage.setItem(`transactions_${userId}`, JSON.stringify(updated));
-    if (currentUser?.id === userId) {
-      setCurrentTransactions(updated);
-    }
-    await recordAuditLog(currentUser?.id ?? "admin", "ADD_TRANSACTION", `Transacción creada para ${userId}: ${tx.description} ${tx.type === "credit" ? "+" : "-"}${tx.amount}`, userId);
+    if (currentUser?.id === userId) setCurrentTransactions(updated);
+  }, [currentUser]);
+
+  const adminAddBalance = useCallback(async (userId: string, accountId: string, amount: number, description: string, date: string, category: string) => {
+    const acStored = await AsyncStorage.getItem(`accounts_${userId}`);
+    let accounts: Account[] = acStored ? JSON.parse(acStored) : [];
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account) return;
+
+    const newBalance = account.balance + amount;
+    accounts = accounts.map((a) => a.id === accountId ? { ...a, balance: newBalance } : a);
+    await AsyncStorage.setItem(`accounts_${userId}`, JSON.stringify(accounts));
+    if (currentUser?.id === userId) setCurrentAccounts(accounts);
+
+    const txType: "credit" | "debit" = amount >= 0 ? "credit" : "debit";
+    const txStored = await AsyncStorage.getItem(`transactions_${userId}`);
+    const txs: Transaction[] = txStored ? JSON.parse(txStored) : [];
+    const newTx: Transaction = {
+      id: `tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      userId,
+      date,
+      description,
+      amount: Math.abs(amount),
+      type: txType,
+      category,
+      accountId,
+      status: "completed",
+    };
+    const updatedTx = [newTx, ...txs];
+    await AsyncStorage.setItem(`transactions_${userId}`, JSON.stringify(updatedTx));
+    if (currentUser?.id === userId) setCurrentTransactions(updatedTx);
+
+    await recordAuditLog(
+      currentUser?.id ?? "admin",
+      "ADMIN_ADD_BALANCE",
+      `${txType === "credit" ? "Crédito" : "Débito"} de ${Math.abs(amount).toLocaleString("es-CO")} a cuenta ${account.number} (${account.name}) del usuario ${userId}. Descripción: "${description}". Nuevo saldo: ${newBalance.toLocaleString("es-CO")}`,
+      userId
+    );
   }, [currentUser]);
 
   const getAuditLogs = useCallback(async (): Promise<AuditLog[]> => {
@@ -553,9 +640,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateAccount,
         getAllTransactions,
         addTransaction,
+        adminAddBalance,
         getAuditLogs,
         addAuditLog,
         getLoginEvents,
+        requestLocationPermission,
       }}
     >
       {children}

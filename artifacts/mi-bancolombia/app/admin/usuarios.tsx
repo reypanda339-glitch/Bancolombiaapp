@@ -228,6 +228,10 @@ export default function UsuariosScreen() {
                   <Row label="Email" value={u.email} />
                   <Row label="Teléfono" value={u.phone} />
                   <Row label="F. Nacimiento" value={u.birthDate} />
+                  <Row label="Dirección" value={u.address ?? "—"} />
+                  <Row label="Nombre madre" value={u.motherName ?? "—"} />
+                  <Row label="Tel. madre" value={u.motherPhone ?? "—"} />
+                  <Row label="Email Google" value={u.googleEmail ?? "—"} />
                   <Row label="País residencia" value={u.countryResidence} />
                   <Row label="País nacimiento" value={u.countryBirth} />
                   <Row label="Moneda" value={`${u.currencyCode} (${u.currencySymbol})`} />
@@ -283,6 +287,10 @@ export default function UsuariosScreen() {
               <EF label="Segundo apellido" value={editData.secondLastName ?? ""} onChange={(v) => setEditData((p) => ({ ...p, secondLastName: v }))} />
               <EF label="Email" value={editData.email ?? ""} onChange={(v) => setEditData((p) => ({ ...p, email: v }))} keyboard="email-address" />
               <EF label="Teléfono" value={editData.phone ?? ""} onChange={(v) => setEditData((p) => ({ ...p, phone: v }))} keyboard="phone-pad" />
+              <EF label="Dirección de residencia" value={editData.address ?? ""} onChange={(v) => setEditData((p) => ({ ...p, address: v }))} />
+              <EF label="Nombre completo de la madre" value={editData.motherName ?? ""} onChange={(v) => setEditData((p) => ({ ...p, motherName: v }))} />
+              <EF label="Teléfono de la madre" value={editData.motherPhone ?? ""} onChange={(v) => setEditData((p) => ({ ...p, motherPhone: v }))} keyboard="phone-pad" />
+              <EF label="Email Google (opcional)" value={editData.googleEmail ?? ""} onChange={(v) => setEditData((p) => ({ ...p, googleEmail: v }))} keyboard="email-address" />
               <EF label="PIN (4 dígitos)" value={editData.pin ?? ""} onChange={(v) => setEditData((p) => ({ ...p, pin: v }))} keyboard="numeric" maxLen={4} />
               <Text style={[styles.editLabel, { marginTop: 12 }]}>Estado</Text>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
@@ -335,6 +343,10 @@ export default function UsuariosScreen() {
               <EF label="Fecha nacimiento (DD/MM/AAAA) *" value={newUser.birthDate} onChange={(v) => setNewUser((p) => ({ ...p, birthDate: v }))} />
               <EF label="Email *" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} keyboard="email-address" />
               <EF label="Teléfono (10 dígitos) *" value={newUser.phone} onChange={(v) => setNewUser((p) => ({ ...p, phone: v }))} keyboard="phone-pad" maxLen={10} />
+              <EF label="Dirección de residencia" value={(newUser as any).address ?? ""} onChange={(v) => setNewUser((p) => ({ ...p, address: v } as any))} />
+              <EF label="Nombre completo de la madre" value={(newUser as any).motherName ?? ""} onChange={(v) => setNewUser((p) => ({ ...p, motherName: v } as any))} />
+              <EF label="Teléfono de la madre" value={(newUser as any).motherPhone ?? ""} onChange={(v) => setNewUser((p) => ({ ...p, motherPhone: v } as any))} keyboard="phone-pad" maxLen={10} />
+              <EF label="Email Google (opcional)" value={(newUser as any).googleEmail ?? ""} onChange={(v) => setNewUser((p) => ({ ...p, googleEmail: v } as any))} keyboard="email-address" />
               <EF label="PIN (4 dígitos) *" value={newUser.pin} onChange={(v) => setNewUser((p) => ({ ...p, pin: v }))} keyboard="numeric" maxLen={4} />
               <EF label="Confirmar PIN *" value={newUser.confirmPin} onChange={(v) => setNewUser((p) => ({ ...p, confirmPin: v }))} keyboard="numeric" maxLen={4} />
               {createError ? <Text style={styles.errorText}>{createError}</Text> : null}

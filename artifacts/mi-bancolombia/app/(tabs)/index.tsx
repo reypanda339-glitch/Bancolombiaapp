@@ -381,6 +381,130 @@ function AccountsSection({ isDark, C }: { isDark: boolean; C: any }) {
 }
 
 const GREEN = "#10B981";
+const ORANGE_RAD = "#F59E0B";
+const RED_RAD = "#EF4444";
+
+function censorDoc(doc: string): string {
+  if (!doc) return "●●●●";
+  const clean = doc.replace(/\s/g, "");
+  if (clean.length <= 4) return "●".repeat(clean.length);
+  return "●".repeat(clean.length - 4) + clean.slice(-4);
+}
+
+type RadicadoInfo = {
+  id: string;
+  radicado: string;
+  userId: string;
+  documentNumber: string;
+  motive: string;
+  expiresAt: string;
+  status: string;
+};
+
+function PendingRadicadosBanner({ userId, isDark }: { userId: string; isDark: boolean }) {
+  const [radicados, setRadicados] = React.useState<RadicadoInfo[]>([]);
+  const [expanded, setExpanded] = React.useState(false);
+  const textSec = isDark ? "rgba(255,255,255,0.55)" : "#6B7280";
+  const cardBg  = isDark ? "#1A1200" : "#FFFBF0";
+
+  React.useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/radicados?userId=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((data: RadicadoInfo[]) => {
+        if (Array.isArray(data)) setRadicados(data);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const now = Date.now();
+  const active  = radicados.filter((r) => r.status === "active" && new Date(r.expiresAt + "T23:59:59").getTime() >= now);
+  const expired = radicados.filter((r) => new Date(r.expiresAt + "T23:59:59").getTime() < now);
+
+  if (active.length === 0 && expired.length === 0) return null;
+
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: active.length > 0 ? ORANGE_RAD + "50" : RED_RAD + "40" }}>
+      {/* Header */}
+      <TouchableOpacity
+        style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 14, backgroundColor: active.length > 0 ? ORANGE_RAD + "18" : RED_RAD + "12" }}
+        onPress={() => setExpanded((p) => !p)}
+        activeOpacity={0.8}
+      >
+        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: (active.length > 0 ? ORANGE_RAD : RED_RAD) + "22", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="tag" size={16} color={active.length > 0 ? ORANGE_RAD : RED_RAD} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: active.length > 0 ? ORANGE_RAD : RED_RAD, fontFamily: "Inter_700Bold" }}>
+            {active.length > 0
+              ? `Documento${active.length > 1 ? "s" : ""} pendiente${active.length > 1 ? "s" : ""} de presentación`
+              : `Radicado${expired.length > 1 ? "s" : ""} vencido${expired.length > 1 ? "s" : ""}`}
+          </Text>
+          <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+            {active.length > 0
+              ? `Tienes ${active.length} radicado${active.length > 1 ? "s" : ""} asignado${active.length > 1 ? "s" : ""} que debes presentar`
+              : `${expired.length} radicado${expired.length > 1 ? "s" : ""} expirado${expired.length > 1 ? "s" : ""} — contacta a soporte`}
+          </Text>
+        </View>
+        <Feather name={expanded ? "chevron-up" : "chevron-down"} size={16} color={textSec} />
+      </TouchableOpacity>
+
+      {/* Expanded rows */}
+      {expanded && (
+        <View style={{ backgroundColor: cardBg }}>
+          {/* Active radicados */}
+          {active.map((rad) => (
+            <View key={rad.id} style={{ padding: 12, borderTopWidth: 1, borderTopColor: ORANGE_RAD + "25", gap: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <Feather name="tag" size={13} color={ORANGE_RAD} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: ORANGE_RAD, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>{rad.radicado}</Text>
+                <View style={{ backgroundColor: ORANGE_RAD + "22", borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 9, color: ORANGE_RAD, fontFamily: "Inter_700Bold" }}>PENDIENTE</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular" }}>Trámite: {rad.motive}</Text>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular" }}>
+                Vence: {new Date(rad.expiresAt + "T00:00:00").toLocaleDateString("es-CO")}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, padding: 8, borderRadius: 8, backgroundColor: ORANGE_RAD + "12" }}>
+                <Feather name="alert-circle" size={12} color={ORANGE_RAD} />
+                <Text style={{ fontSize: 11, color: ORANGE_RAD, fontFamily: "Inter_500Medium", flex: 1, lineHeight: 15 }}>
+                  Debes presentar el código de barras de este documento al personal de Bancolombia.
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {/* Expired radicados — show censored document number */}
+          {expired.map((rad) => (
+            <View key={rad.id} style={{ padding: 12, borderTopWidth: 1, borderTopColor: RED_RAD + "25", gap: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <Feather name="tag" size={13} color={RED_RAD} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: RED_RAD, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>{rad.radicado}</Text>
+                <View style={{ backgroundColor: RED_RAD + "22", borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 9, color: RED_RAD, fontFamily: "Inter_700Bold" }}>VENCIDO</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular" }}>Trámite: {rad.motive}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <Text style={{ fontSize: 10, color: textSec, fontFamily: "Inter_500Medium" }}>Documento:</Text>
+                <Text style={{ fontSize: 14, color: RED_RAD, fontFamily: "Inter_700Bold", letterSpacing: 4 }}>
+                  {censorDoc(rad.documentNumber)}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 4, padding: 8, borderRadius: 8, backgroundColor: RED_RAD + "10" }}>
+                <Feather name="alert-triangle" size={12} color={RED_RAD} style={{ marginTop: 1 }} />
+                <Text style={{ fontSize: 11, color: RED_RAD, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 15 }}>
+                  Este radicado venció el {new Date(rad.expiresAt + "T00:00:00").toLocaleDateString("es-CO")}. No puede ser utilizado. Contacta a soporte para renovarlo.
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function HomeScreen() {
@@ -613,6 +737,11 @@ export default function HomeScreen() {
           </View>
         );
       })()}
+
+      {/* ── PENDING RADICADOS BANNER ── */}
+      {currentUser?.id && !currentUser.isAdmin && (
+        <PendingRadicadosBanner userId={currentUser.id} isDark={isDark} />
+      )}
 
       {/* ── SCROLL CONTENT ── */}
       <ScrollView showsVerticalScrollIndicator={false} bounces contentContainerStyle={{ paddingBottom: 90 }}>

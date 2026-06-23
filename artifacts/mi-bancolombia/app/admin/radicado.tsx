@@ -167,30 +167,32 @@ function RadicadoRow({ r, onDelete }: { r: Radicado; onDelete: (id: string) => v
   const statusLabel = expired ? "Vencido" : r.status === "active" ? "Activo" : r.status;
 
   return (
-    <TouchableOpacity onPress={() => setExp(!exp)} style={[styles.row, { borderColor: statusColor + "30" }]}>
-      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: statusColor + "18", alignItems: "center", justifyContent: "center" }}>
-          <Feather name="tag" size={17} color={statusColor} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>{r.radicado}</Text>
-            <View style={{ backgroundColor: statusColor + "22", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 10, color: statusColor, fontFamily: "Inter_700Bold" }}>{statusLabel}</Text>
-            </View>
+    <View style={[styles.row, { borderColor: statusColor + "30" }]}>
+      <TouchableOpacity onPress={() => setExp(!exp)} activeOpacity={0.7}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: statusColor + "18", alignItems: "center", justifyContent: "center" }}>
+            <Feather name="tag" size={17} color={statusColor} />
           </View>
-          <Text style={{ fontSize: 12, color: TEXTSEC, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-            {r.userName} · {r.documentNumber}
-          </Text>
-          <Text style={{ fontSize: 11, color: TEXTSEC, fontFamily: "Inter_400Regular" }}>
-            Motivo: {r.motive}
-          </Text>
-          <Text style={{ fontSize: 11, color: expired ? RED + "AA" : TEXTSEC, fontFamily: "Inter_400Regular" }}>
-            Vence: {new Date(r.expiresAt + "T00:00:00").toLocaleDateString("es-CO")}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT, fontFamily: "Inter_700Bold", letterSpacing: 0.5 }}>{r.radicado}</Text>
+              <View style={{ backgroundColor: statusColor + "22", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 10, color: statusColor, fontFamily: "Inter_700Bold" }}>{statusLabel}</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: TEXTSEC, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+              {r.userName} · {r.documentNumber}
+            </Text>
+            <Text style={{ fontSize: 11, color: TEXTSEC, fontFamily: "Inter_400Regular" }}>
+              Motivo: {r.motive}
+            </Text>
+            <Text style={{ fontSize: 11, color: expired ? RED + "AA" : TEXTSEC, fontFamily: "Inter_400Regular" }}>
+              Vence: {new Date(r.expiresAt + "T00:00:00").toLocaleDateString("es-CO")}
+            </Text>
+          </View>
+          <Feather name={exp ? "chevron-up" : "chevron-down"} size={16} color={TEXTSEC} />
         </View>
-        <Feather name={exp ? "chevron-up" : "chevron-down"} size={16} color={TEXTSEC} />
-      </View>
+      </TouchableOpacity>
       {exp && (
         <View style={{ marginTop: 14, gap: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 14 }}>
           {r.description ? (
@@ -206,7 +208,7 @@ function RadicadoRow({ r, onDelete }: { r: Radicado; onDelete: (id: string) => v
           </TouchableOpacity>
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -318,22 +320,24 @@ export default function RadicadoScreen() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert("Eliminar radicado", "¿Seguro que deseas eliminar este radicado? El usuario no podrá verificarlo.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await fetch(`/api/radicados/${id}`, { method: "DELETE" });
-            setRadicados((prev) => prev.filter((r) => r.id !== id));
-          } catch {
-            Alert.alert("Error", "No se pudo eliminar el radicado.");
-          }
-        },
-      },
-    ]);
+  const handleDelete = async (id: string) => {
+    const confirmed = Platform.OS === "web"
+      ? window.confirm("¿Seguro que deseas eliminar este radicado? El usuario no podrá verificarlo.")
+      : await new Promise<boolean>((resolve) => {
+          Alert.alert("Eliminar radicado", "¿Seguro que deseas eliminar este radicado? El usuario no podrá verificarlo.", [
+            { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+            { text: "Eliminar", style: "destructive", onPress: () => resolve(true) },
+          ]);
+        });
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/radicados/${id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) throw new Error("Error al eliminar");
+      setRadicados((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      if (Platform.OS === "web") window.alert("No se pudo eliminar el radicado.");
+      else Alert.alert("Error", "No se pudo eliminar el radicado.");
+    }
   };
 
   return (

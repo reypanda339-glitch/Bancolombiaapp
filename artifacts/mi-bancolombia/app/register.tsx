@@ -17,13 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 import type { DocType } from "@/constants/countries";
+import { ALL_DOC_TYPES, DOC_TYPE_LABELS } from "@/constants/countries";
 import { PinPad } from "@/components/PinPad";
-
-const DOC_TYPES: { label: string; value: DocType }[] = [
-  { label: "Cédula de Ciudadanía (CC)", value: "CC" },
-  { label: "Cédula de Extranjería (CE)", value: "CE" },
-  { label: "Pasaporte (PA)", value: "PA" },
-];
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -158,7 +153,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const docLabel = DOC_TYPES.find((d) => d.value === documentType)?.label ?? documentType;
+  const docLabel = DOC_TYPE_LABELS[documentType] ?? documentType;
 
   const inputStyle = [styles.input, { backgroundColor: C.inputBg, borderColor: C.inputBorder, color: C.text }];
   const labelStyle = [styles.label, { color: C.textSecondary }];
@@ -213,16 +208,16 @@ export default function RegisterScreen() {
 
             {showDocPicker && (
               <View style={[styles.dropdown, { backgroundColor: C.surface, borderColor: C.border }]}>
-                {DOC_TYPES.map((d) => (
+                {ALL_DOC_TYPES.map((code) => (
                   <TouchableOpacity
-                    key={d.value}
+                    key={code}
                     style={[styles.dropdownItem, { borderBottomColor: C.divider }]}
-                    onPress={() => { setDocumentType(d.value); setShowDocPicker(false); }}
+                    onPress={() => { setDocumentType(code); setShowDocPicker(false); }}
                   >
-                    <Text style={{ color: d.value === documentType ? C.yellow : C.text, fontFamily: "Inter_400Regular", fontSize: 14 }}>
-                      {d.label}
+                    <Text style={{ color: code === documentType ? C.yellow : C.text, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+                      {DOC_TYPE_LABELS[code]}
                     </Text>
-                    {d.value === documentType && <Feather name="check" size={16} color={C.yellow} />}
+                    {code === documentType && <Feather name="check" size={16} color={C.yellow} />}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -233,10 +228,11 @@ export default function RegisterScreen() {
               style={inputStyle}
               value={documentNumber}
               onChangeText={setDocumentNumber}
-              keyboardType="numeric"
+              keyboardType="default"
               placeholder="Ej. 1234567890"
               placeholderTextColor={C.textLight}
-              maxLength={15}
+              autoCapitalize="characters"
+              maxLength={20}
             />
             {errors.documentNumber && <Text style={errorStyle}>{errors.documentNumber}</Text>}
           </View>

@@ -148,7 +148,7 @@ export default function LoginScreen() {
           {showInstallBtn && (
             <TouchableOpacity style={styles.installBtn} onPress={handleInstall} activeOpacity={0.82}>
               <Feather name="download" size={11} color="#FFFFFF" />
-              <Text style={styles.installBtnText}>Descargar app</Text>
+              <Text style={styles.installBtnText}>Instalar app</Text>
             </TouchableOpacity>
           )}
         </View>

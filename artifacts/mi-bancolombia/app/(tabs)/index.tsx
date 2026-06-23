@@ -380,6 +380,8 @@ function AccountsSection({ isDark, C }: { isDark: boolean; C: any }) {
   );
 }
 
+const GREEN = "#10B981";
+
 /* ══════════════════════════════════════════════════════════════ */
 export default function HomeScreen() {
   const { userName, logout, supportPhone, currentUser } = useApp();
@@ -395,6 +397,44 @@ export default function HomeScreen() {
   const [showClave, setShowClave]       = useState(false);
   const [claveCode, setClaveCode]       = useState("");
   const [showUnblock, setShowUnblock]   = useState(false);
+
+  /* PWA install */
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const isStandalone =
+      (window as any).matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    if (isStandalone) return;
+    const showIfReady = () => { if ((window as any).__pwaInstallPrompt) setShowInstallBtn(true); };
+    showIfReady();
+    const onReady = () => setShowInstallBtn(true);
+    const onDone  = () => setShowInstallBtn(false);
+    const mq = (window as any).matchMedia?.("(display-mode: standalone)");
+    const onMq = (ev: any) => { if (ev.matches) setShowInstallBtn(false); };
+    window.addEventListener("pwa-prompt-ready", onReady);
+    window.addEventListener("pwa-installed", onDone);
+    mq?.addEventListener?.("change", onMq);
+    return () => {
+      window.removeEventListener("pwa-prompt-ready", onReady);
+      window.removeEventListener("pwa-installed", onDone);
+      mq?.removeEventListener?.("change", onMq);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    const deferred = (window as any).__pwaInstallPrompt;
+    if (!deferred) return;
+    try {
+      deferred.prompt();
+      const { outcome } = await deferred.userChoice;
+      if (outcome === "accepted") {
+        (window as any).__pwaInstallPrompt = null;
+        setShowInstallBtn(false);
+      }
+    } catch { /* ignore */ }
+  };
 
   const handleLogoutConfirm = async () => {
     setShowLogout(false);
@@ -435,11 +475,17 @@ export default function HomeScreen() {
 
       {/* ── HEADER ── */}
       <View style={[styles.header, { backgroundColor: C.headerBg ?? C.background, borderBottomColor: C.border }]}>
-        {/* Logo */}
+        {/* Logo + Install */}
         <View style={styles.logoRow}>
           <Image source={require("../../assets/images/pwa-icon.png")}
             style={styles.logoImg} resizeMode="contain" />
           <Text style={[styles.logoText, { color: C.text }]} numberOfLines={1}>Mi Bancolombia</Text>
+          {showInstallBtn && (
+            <TouchableOpacity style={styles.installBtn} onPress={handleInstall} activeOpacity={0.82}>
+              <Feather name="download" size={11} color="#FFFFFF" />
+              <Text style={styles.installBtnText}>Instalar app</Text>
+            </TouchableOpacity>
+          )}
         </View>
         {/* Icons */}
         <View style={styles.headerIcons}>
@@ -590,6 +636,12 @@ const styles = StyleSheet.create({
   logoRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0, marginRight: 4 },
   logoImg: { width: 28, height: 28, borderRadius: 7 },
   logoText: { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", flexShrink: 1 },
+  installBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: GREEN, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 5, marginLeft: 2,
+  },
+  installBtnText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   headerIcons: { flexDirection: "row", alignItems: "center", gap: 2 },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
 

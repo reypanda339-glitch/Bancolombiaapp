@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import type { Account, RegisteredUser } from "@/context/AppContext";
+import { DateInput } from "@/components/DateInput";
 
 const BG = "#0F1320";
 const CARD = "#161B2E";
@@ -66,7 +67,7 @@ export default function CuentasScreen() {
     const regularUsers = u.filter((x) => !x.isAdmin);
     setAccounts(
       a.map((acc) => {
-        const owner = regularUsers.find((usr) => acc.userId === usr.id || acc.id.includes(usr.id));
+        const owner = regularUsers.find((usr) => acc.userId === usr.id);
         return {
           ...acc,
           userName: owner ? `${owner.firstName} ${owner.lastName}` : "—",
@@ -128,7 +129,7 @@ export default function CuentasScreen() {
     if (!txDesc.trim())
       return setTxError("Ingresa una descripción para el movimiento");
     if (!txDate.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(txDate))
-      return setTxError("Formato de fecha: AAAA-MM-DD");
+      return setTxError("Selecciona o ingresa una fecha válida");
     if (!txAccount) return;
 
     setTxSaving(true);
@@ -139,8 +140,14 @@ export default function CuentasScreen() {
     load();
   };
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+  const fmtCurrency = (n: number, code: string = "COP", locale: string = "es-CO") => {
+    try {
+      return new Intl.NumberFormat(locale, { style: "currency", currency: code, maximumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${n.toLocaleString("es-CO")} ${code}`;
+    }
+  };
+  const fmt = (n: number) => fmtCurrency(n, txAccount?.currencyCode ?? "COP");
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -149,7 +156,7 @@ export default function CuentasScreen() {
           <Image source={require("../../assets/images/pwa-icon.png")} style={{ width: 26, height: 26, borderRadius: 6 }} resizeMode="contain" />
           <View>
             <Text style={styles.title}>Cuentas</Text>
-            <Text style={styles.sub}>{accounts.length} cuentas · Total: {fmt(totalBalance)}</Text>
+            <Text style={styles.sub}>{accounts.length} cuentas · Total: {fmtCurrency(totalBalance, "COP")}</Text>
           </View>
         </View>
       </View>
@@ -241,7 +248,7 @@ export default function CuentasScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.editLabel}>Saldo directo (COP)</Text>
+            <Text style={styles.editLabel}>Saldo directo ({selected?.currencyCode ?? "COP"})</Text>
             <TextInput
               style={styles.editInput}
               value={editBalance}
@@ -305,7 +312,7 @@ export default function CuentasScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.editLabel}>Monto (COP) *</Text>
+              <Text style={styles.editLabel}>Monto ({txAccount?.currencyCode ?? "COP"}) *</Text>
               <TextInput
                 style={styles.editInput}
                 value={txAmount}
@@ -324,14 +331,13 @@ export default function CuentasScreen() {
                 placeholderTextColor={TEXTSEC}
               />
 
-              <Text style={[styles.editLabel, { marginTop: 14 }]}>Fecha (AAAA-MM-DD) *</Text>
-              <TextInput
-                style={styles.editInput}
+              <Text style={[styles.editLabel, { marginTop: 14 }]}>Fecha del movimiento *</Text>
+              <DateInput
                 value={txDate}
-                onChangeText={setTxDate}
-                placeholder="2025-01-15"
-                placeholderTextColor={TEXTSEC}
-                maxLength={10}
+                onChange={setTxDate}
+                outputFormat="YMD"
+                isDark
+                maxDate={new Date().toISOString().slice(0, 10)}
               />
 
               <Text style={[styles.editLabel, { marginTop: 14 }]}>Categoría</Text>

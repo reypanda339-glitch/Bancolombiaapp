@@ -1,9 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Platform,
-  StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -60,7 +58,9 @@ interface DateInputProps {
  * outputFormat="DMY" → onChange emits "DD/MM/YYYY"   (default)
  * outputFormat="YMD" → onChange emits "YYYY-MM-DD"
  *
- * The displayed value is always DD/MM/AAAA regardless of outputFormat.
+ * Internal display is always DD/MM/AAAA. onChange is only called when the
+ * date is complete (10 display chars = valid date) or fully cleared (empty).
+ * This prevents emitting invalid/empty strings while the user is still typing.
  */
 export function DateInput({
   value,
@@ -77,22 +77,42 @@ export function DateInput({
 }: DateInputProps) {
   const hiddenRef = useRef<any>(null);
 
-  const displayValue =
-    outputFormat === "YMD" ? ymdToDmy(value) : value;
+  // Internal display state — always DD/MM/YYYY format
+  const [displayStr, setDisplayStr] = useState<string>(() =>
+    outputFormat === "YMD" ? ymdToDmy(value) : value
+  );
 
-  const emit = (dmy: string) => {
-    if (outputFormat === "YMD") {
-      const ymd = dmyToYmd(dmy);
-      onChange(ymd !== "" ? ymd : "");
-    } else {
-      onChange(dmy);
+  // Sync external value resets (e.g. form reset) into display
+  useEffect(() => {
+    const ext = outputFormat === "YMD" ? ymdToDmy(value) : value;
+    // Only overwrite display when external value is a complete date and different
+    if (ext && ext !== displayStr) {
+      setDisplayStr(ext);
     }
-  };
+    // When parent clears the value, clear display too
+    if (!value) {
+      setDisplayStr("");
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (raw: string) => {
     const digits = digitsOnly(raw);
     const fmt = autoFormatDMY(digits);
-    emit(fmt);
+    setDisplayStr(fmt);
+
+    if (fmt.length === 10) {
+      // Complete date — emit in the correct output format
+      if (outputFormat === "YMD") {
+        const ymd = dmyToYmd(fmt);
+        if (ymd) onChange(ymd);
+      } else {
+        onChange(fmt);
+      }
+    } else if (fmt.length === 0) {
+      // Field cleared — notify parent
+      onChange("");
+    }
+    // Partial date — do NOT call onChange; parent keeps its previous valid value
   };
 
   const openCalendar = () => {
@@ -109,6 +129,7 @@ export function DateInput({
     if (Platform.OS !== "web") return;
     const ymdVal: string = e.target.value;
     if (!ymdVal) return;
+    setDisplayStr(ymdToDmy(ymdVal));
     if (outputFormat === "YMD") {
       onChange(ymdVal);
     } else {
@@ -116,8 +137,9 @@ export function DateInput({
     }
   };
 
+  // Value passed to the hidden <input type="date"> — must be YYYY-MM-DD
   const calendarValue =
-    outputFormat === "YMD" ? value : dmyToYmd(value);
+    outputFormat === "YMD" ? value : dmyToYmd(displayStr);
 
   const borderColor = error
     ? "#EF4444"
@@ -154,7 +176,7 @@ export function DateInput({
             },
             inputStyle,
           ]}
-          value={displayValue}
+          value={displayStr}
           onChangeText={handleChange}
           placeholder={placeholder}
           placeholderTextColor={iconColor}

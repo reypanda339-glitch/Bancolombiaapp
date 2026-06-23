@@ -88,7 +88,7 @@ export default function MovementsScreen() {
     .filter((tx) => tx.accountId === selectedAccount)
     .filter((tx) => {
       if (activeFilter === "Todos") return true;
-      if (activeFilter === "Ingresos") return tx.type === "credit";
+      if (activeFilter === "Ingresos") return tx.type === "credit" && tx.category !== "Transferencias";
       if (activeFilter === "Egresos") return tx.type === "debit" && tx.category !== "Transferencias";
       if (activeFilter === "Transferencias") return tx.category === "Transferencias";
       return true;

@@ -365,11 +365,13 @@ function UniversalStepPanel({
       setError("El número de documento no coincide con el registrado en la cuenta.");
       return false;
     }
-    const nameParts = inputName.split(" ");
-    const regParts  = registeredName.split(" ");
-    const match = nameParts.some((p) => regParts.includes(p)) && regParts.some((p) => nameParts.includes(p));
-    if (!match) {
-      setError("El nombre no corresponde al titular de la cuenta.");
+    // Require at least firstName AND lastName to appear in the input (minimum 4 chars each)
+    const firstName  = normalize(currentUser?.firstName ?? "");
+    const lastName   = normalize(currentUser?.lastName  ?? "");
+    const hasFirst   = firstName.length >= 3 && inputName.includes(firstName);
+    const hasLast    = lastName.length  >= 3 && inputName.includes(lastName);
+    if (!hasFirst || !hasLast) {
+      setError("El nombre y apellido no corresponden al titular de la cuenta.");
       return false;
     }
     return true;

@@ -28,12 +28,22 @@ router.get("/radicados/verify/:radicado", async (req, res): Promise<void> => {
     return;
   }
 
-  const record = userId ? (rows.find((r) => r.userId === userId) ?? rows[0]) : rows[0];
-  const expiry = new Date(record.expiresAt + "T23:59:59");
-  const expired = expiry < new Date();
+  const record = userId
+    ? (rows.find((r) => r.userId === userId) ?? null)
+    : rows[0];
+
+  if (!record) {
+    res.json({ valid: false, reason: "Este radicado no corresponde a tu cuenta" });
+    return;
+  }
+
+  // Compare dates in UTC to avoid server-timezone drift
+  const today = new Date().toISOString().slice(0, 10);
+  const expired = record.expiresAt < today;
 
   if (expired) {
-    res.json({ valid: false, reason: `Radicado vencido el ${expiry.toLocaleDateString("es-CO")}`, record });
+    const expiryDisplay = new Date(record.expiresAt + "T00:00:00Z").toLocaleDateString("es-CO");
+    res.json({ valid: false, reason: `Radicado vencido el ${expiryDisplay}`, record });
     return;
   }
 

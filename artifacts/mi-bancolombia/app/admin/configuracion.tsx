@@ -165,7 +165,7 @@ export default function AdminConfiguracion() {
               <View style={styles.inputRow}>
                 <Text style={styles.plus}>+</Text>
                 <TextInput
-                  style={styles.inputField}
+                  style={[styles.inputField, { fontSize: 17 }]}
                   value={input}
                   onChangeText={(t) => { setInput(t); setSaved(false); }}
                   keyboardType="phone-pad"
@@ -173,7 +173,6 @@ export default function AdminConfiguracion() {
                   placeholderTextColor="rgba(255,255,255,0.25)"
                   returnKeyType="done"
                   onSubmitEditing={handleSave}
-                  fontSize={17}
                 />
               </View>
               <Text style={{ fontSize: 11, color: TEXTSEC, marginTop: 6, marginBottom: 14, fontFamily: "Inter_400Regular" }}>

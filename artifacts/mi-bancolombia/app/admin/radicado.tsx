@@ -396,13 +396,12 @@ export default function RadicadoScreen() {
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Número de radicado *</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput
-              style={[styles.input, { flex: 1 }, errors.radicado ? { borderColor: RED + "80" } : {}]}
+              style={[styles.input, { flex: 1, fontSize: 16 }, errors.radicado ? { borderColor: RED + "80" } : {}]}
               value={radicadoNum}
               onChangeText={(v) => { setRadicadoNum(v.toUpperCase()); setErrors((e) => ({ ...e, radicado: "" })); }}
               placeholder="2024-1234567"
               placeholderTextColor={TEXTSEC}
               autoCapitalize="characters"
-              fontSize={16}
             />
             <TouchableOpacity
               style={{ backgroundColor: BLUE + "22", borderRadius: 10, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: BLUE + "40" }}
@@ -416,26 +415,24 @@ export default function RadicadoScreen() {
           {/* Motive */}
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Motivo / Tipo de trámite *</Text>
           <TextInput
-            style={[styles.input, errors.motive ? { borderColor: RED + "80" } : {}]}
+            style={[styles.input, { fontSize: 16 }, errors.motive ? { borderColor: RED + "80" } : {}]}
             value={motive}
             onChangeText={(v) => { setMotive(v); setErrors((e) => ({ ...e, motive: "" })); }}
             placeholder="Ej: Verificación de identidad"
             placeholderTextColor={TEXTSEC}
-            fontSize={16}
           />
           {errors.motive ? <Text style={styles.fieldError}>{errors.motive}</Text> : null}
 
           {/* Description */}
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Descripción adicional (opcional)</Text>
           <TextInput
-            style={[styles.input, { height: 72, textAlignVertical: "top", paddingTop: 10 }]}
+            style={[styles.input, { height: 72, textAlignVertical: "top", paddingTop: 10, fontSize: 16 }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Información adicional del documento..."
             placeholderTextColor={TEXTSEC}
             multiline
             numberOfLines={3}
-            fontSize={16}
           />
 
           {/* Expiry date */}

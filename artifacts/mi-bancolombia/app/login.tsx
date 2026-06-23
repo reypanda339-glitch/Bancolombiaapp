@@ -36,32 +36,57 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const installPromptRef = useRef<any>(null);
-  const [canInstall, setCanInstall] = useState(false);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const handler = (e: Event) => {
+
+    const isStandalone =
+      (window as any).matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+
+    if (isStandalone) {
+      setShowInstallBtn(false);
+      return;
+    }
+
+    setShowInstallBtn(true);
+
+    const handlePrompt = (e: Event) => {
       e.preventDefault();
       installPromptRef.current = e;
-      setCanInstall(true);
     };
-    (window as any).addEventListener("beforeinstallprompt", handler);
-    (window as any).addEventListener("appinstalled", () => setCanInstall(false));
+
+    const handleInstalled = () => {
+      setShowInstallBtn(false);
+      installPromptRef.current = null;
+    };
+
+    (window as any).addEventListener("beforeinstallprompt", handlePrompt);
+    (window as any).addEventListener("appinstalled", handleInstalled);
+
+    const mq = (window as any).matchMedia?.("(display-mode: standalone)");
+    const mqHandler = (ev: any) => { if (ev.matches) setShowInstallBtn(false); };
+    mq?.addEventListener?.("change", mqHandler);
+
     return () => {
-      (window as any).removeEventListener("beforeinstallprompt", handler);
+      (window as any).removeEventListener("beforeinstallprompt", handlePrompt);
+      (window as any).removeEventListener("appinstalled", handleInstalled);
+      mq?.removeEventListener?.("change", mqHandler);
     };
   }, []);
 
   const handleInstall = async () => {
-    if (!installPromptRef.current) return;
-    installPromptRef.current.prompt();
-    try {
-      const { outcome } = await installPromptRef.current.userChoice;
-      if (outcome === "accepted") {
-        setCanInstall(false);
-        installPromptRef.current = null;
-      }
-    } catch { /* ignore */ }
+    if (installPromptRef.current) {
+      try {
+        installPromptRef.current.prompt();
+        const { outcome } = await installPromptRef.current.userChoice;
+        if (outcome === "accepted") {
+          setShowInstallBtn(false);
+          installPromptRef.current = null;
+        }
+      } catch { /* ignore */ }
+    }
   };
 
   const { login } = useApp();
@@ -124,10 +149,10 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
           <Text style={[styles.topLogoText, { color: textColor }]}>Mi Bancolombia</Text>
-          {canInstall && (
+          {showInstallBtn && (
             <TouchableOpacity style={styles.installBtn} onPress={handleInstall} activeOpacity={0.82}>
               <Feather name="download" size={11} color="#FFFFFF" />
-              <Text style={styles.installBtnText}>Instala banca móvil</Text>
+              <Text style={styles.installBtnText}>Descargar app</Text>
             </TouchableOpacity>
           )}
         </View>

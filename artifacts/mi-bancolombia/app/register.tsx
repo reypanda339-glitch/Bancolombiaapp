@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_400Regular",
   },
   pickerBtn: {

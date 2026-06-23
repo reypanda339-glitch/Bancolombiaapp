@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
   readonlyCard: { borderRadius: 14, overflow: "hidden" },
   readonlyHint: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 8, paddingHorizontal: 4 },
   editLabel: { fontSize: 13, fontFamily: "Inter_500Medium", fontWeight: "500", marginTop: 16, marginBottom: 6 },
-  editInput: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", borderWidth: 1 },
+  editInput: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Inter_400Regular", borderWidth: 1 },
   saveBtn: { borderRadius: 14, paddingVertical: 15, alignItems: "center", marginTop: 8 },
   saveBtnText: { fontSize: 15, fontWeight: "700", color: "#1C1C1E", fontFamily: "Inter_700Bold" },
 

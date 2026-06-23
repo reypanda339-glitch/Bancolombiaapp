@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1.5, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, fontFamily: "Inter_400Regular",
+    fontSize: 16, fontFamily: "Inter_400Regular",
   },
   errorText: { fontSize: 12, color: "#EF4444", fontFamily: "Inter_400Regular", marginTop: 6 },
   primaryBtn: {

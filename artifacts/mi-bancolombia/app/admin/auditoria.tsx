@@ -449,7 +449,7 @@ export default function AuditoriaScreen() {
             </View>
             <Text style={{ fontSize: 13, color: TEXTSEC, fontFamily: "Inter_400Regular" }}>Ingresa el motivo del rechazo (opcional):</Text>
             <TextInput
-              style={{ backgroundColor: BG, color: TEXT, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 13, borderWidth: 1, borderColor: RED + "40", minHeight: 60, textAlignVertical: "top" }}
+              style={{ backgroundColor: BG, color: TEXT, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 16, borderWidth: 1, borderColor: RED + "40", minHeight: 60, textAlignVertical: "top" }}
               value={rejectReason}
               onChangeText={setRejectReason}
               placeholder="Ej: Documento no legible, información inconsistente..."
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: TEXTSEC },
   tabTextActive: { color: YELLOW, fontFamily: "Inter_600SemiBold" },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginBottom: 8, backgroundColor: CARD, borderRadius: 12, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, paddingVertical: 10 },
-  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: TEXT },
+  searchInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", color: TEXT },
   filterScroll: { marginBottom: 8 },
   filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   filterBtnActive: { backgroundColor: "rgba(253,218,36,0.08)" },

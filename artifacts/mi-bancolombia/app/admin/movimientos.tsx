@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: TEXT },
+  searchInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", color: TEXT },
   filterRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
   filterBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: BORDER, alignItems: "center" },
   filterBtnActive: { backgroundColor: YELLOW + "22", borderColor: YELLOW + "60" },

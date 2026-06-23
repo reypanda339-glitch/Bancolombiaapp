@@ -514,7 +514,7 @@ export default function HomeScreen() {
       })()}
 
       {/* ── SCROLL CONTENT ── */}
-      <ScrollView showsVerticalScrollIndicator={false} bounces contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView showsVerticalScrollIndicator={false} bounces contentContainerStyle={{ paddingBottom: 90 }}>
 
         {/* HERO */}
         <View style={[styles.hero, { backgroundColor: isDark ? "#16161A" : "#F7F7FA", overflow: "hidden" }]}>
@@ -662,8 +662,8 @@ const styles = StyleSheet.create({
   secTitle: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold", paddingHorizontal: 16, marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   gridItem: { alignItems: "center", paddingBottom: 14, paddingHorizontal: 2 },
-  gridIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 6 },
-  gridLabel: { fontSize: 9.5, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 12, paddingHorizontal: 2 },
+  gridIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 7 },
+  gridLabel: { fontSize: 11, fontFamily: "Inter_500Medium", textAlign: "center", lineHeight: 14, paddingHorizontal: 3 },
 
   /* Bottom sheet overlay */
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },

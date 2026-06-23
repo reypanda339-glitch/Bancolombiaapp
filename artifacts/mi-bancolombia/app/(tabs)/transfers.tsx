@@ -529,7 +529,7 @@ function InscribirView({ onBack }: { onBack: () => void }) {
     ]);
   };
 
-  const inputStyle = { borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 12, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular" as const, color: "#1C1C1E", backgroundColor: "#FFFFFF" };
+  const inputStyle = { borderWidth: 1.5, borderColor: "#E5E7EB", borderRadius: 12, padding: 14, fontSize: 16, fontFamily: "Inter_400Regular" as const, color: "#1C1C1E", backgroundColor: "#FFFFFF" };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "#F5F5F7" }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -851,7 +851,7 @@ const tx = StyleSheet.create({
   section:{padding:20},
   sectionTitle:{fontSize:15,fontWeight:"700",color:"#1C1C1E",fontFamily:"Inter_700Bold",marginBottom:12},
   searchWrap:{flexDirection:"row",alignItems:"center",gap:10,backgroundColor:"#FFFFFF",borderRadius:12,paddingHorizontal:14,paddingVertical:10,marginBottom:12,borderWidth:1,borderColor:"#E5E7EB"},
-  searchInput:{flex:1,fontSize:15,fontFamily:"Inter_400Regular",color:"#1C1C1E"},
+  searchInput:{flex:1,fontSize:16,fontFamily:"Inter_400Regular",color:"#1C1C1E"},
   contactRow:{flexDirection:"row",alignItems:"center",gap:12,backgroundColor:"#FFFFFF",borderRadius:14,padding:14,marginBottom:8,borderWidth:1.5,borderColor:"transparent"},
   contactRowActive:{borderColor:"#FDDA24",backgroundColor:"#FFFDF0"},
   contactAvatar:{width:44,height:44,borderRadius:22,alignItems:"center",justifyContent:"center"},
@@ -862,7 +862,7 @@ const tx = StyleSheet.create({
   newContactBtn:{flexDirection:"row",alignItems:"center",gap:8,paddingVertical:14,paddingHorizontal:16,borderRadius:14,borderWidth:1.5,borderStyle:"dashed",borderColor:"#3B82F6",backgroundColor:"transparent"},
   newContactText:{fontSize:14,fontWeight:"600",color:"#3B82F6",fontFamily:"Inter_600SemiBold"},
   noteSection:{paddingHorizontal:20,paddingBottom:8},
-  noteInput:{backgroundColor:"#FFFFFF",borderRadius:12,paddingHorizontal:14,paddingVertical:12,fontSize:15,fontFamily:"Inter_400Regular",color:"#1C1C1E",borderWidth:1,borderColor:"#E5E7EB"},
+  noteInput:{backgroundColor:"#FFFFFF",borderRadius:12,paddingHorizontal:14,paddingVertical:12,fontSize:16,fontFamily:"Inter_400Regular",color:"#1C1C1E",borderWidth:1,borderColor:"#E5E7EB"},
   btn:{flexDirection:"row",alignItems:"center",justifyContent:"center",gap:10,backgroundColor:"#FDDA24",borderRadius:14,paddingVertical:16,marginHorizontal:20,marginTop:16},
   btnDisabled:{opacity:0.4},
   btnText:{fontSize:16,fontWeight:"700",color:"#1C1C1E",fontFamily:"Inter_700Bold"},
@@ -882,5 +882,5 @@ const ms = StyleSheet.create({
   grid:{flexDirection:"row",flexWrap:"wrap",padding:12,gap:10},
   item:{borderRadius:16,padding:12,alignItems:"center",gap:8,minHeight:100,justifyContent:"center"},
   iconWrap:{width:48,height:48,borderRadius:14,alignItems:"center",justifyContent:"center"},
-  itemLabel:{fontSize:10,color:"#1C1C1E",fontFamily:"Inter_500Medium",textAlign:"center",lineHeight:14},
+  itemLabel:{fontSize:11,color:"#1C1C1E",fontFamily:"Inter_500Medium",textAlign:"center",lineHeight:15},
 });

@@ -1,3 +1,5 @@
 - [Mi Bancolombia currency formatting](mi-bancolombia-currency.md) — formatBalance(amount, code, symbol, showCode) in countries.ts is the canonical formatter; always import from there, never use Intl directly in components.
 - [Mi Bancolombia banks by currency](mi-bancolombia-banks.md) — BANKS_BY_CURRENCY in countries.ts maps currency code → array of real bank names; use getBanksByCountry(countryCode) to get the right list per user country.
 - [Mi Bancolombia type conventions](mi-bancolombia-types.md) — DocType lives in constants/countries.ts; AppContext re-exports it. currentUser (not user) is the logged-in user from useApp(). DocumentType was a ghost type — always use DocType.
+- [Mi Bancolombia +html.tsx PWA CSS](mi-bancolombia-html-tsx.md) — NEVER use body{position:fixed} in +html.tsx; it blanks out React Native Web entirely.
+- [Mi Bancolombia TextInput fontSize rule](mi-bancolombia-textinput-fontsize.md) — All TextInputs must have fontSize≥16 to prevent iOS PWA zoom; all screens fixed as of 2026-06-23.

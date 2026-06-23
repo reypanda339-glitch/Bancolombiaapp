@@ -47,7 +47,7 @@ export default function MovimientosScreen() {
     setUsers(regular);
     const withUser: TxWithUser[] = txs.map((tx) => {
       const owner = regular.find((usr) => usr.id === tx.userId);
-      return { ...tx, userName: owner ? `${owner.firstName} ${owner.lastName}` : "Demo" };
+      return { ...tx, userName: owner ? `${owner.firstName} ${owner.lastName}` : "Usuario" };
     });
     setTransactions(withUser);
     setLoading(false);

@@ -1,0 +1,87 @@
+import React, { useState, useEffect } from "react";
+import { Signal, Wifi, Battery, ChevronLeft } from "lucide-react";
+
+interface PhoneContainerProps {
+  children: React.ReactNode;
+  onBack?: () => void;
+  showBackButton?: boolean;
+  title?: string;
+  className?: string;
+}
+
+export default function PhoneContainer({
+  children,
+  onBack,
+  showBackButton = false,
+  title = "",
+  className = ""
+}: PhoneContainerProps) {
+  const [time, setTime] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12; // Convert to 12-hour format
+      setTime(`${hours}:${minutes} ${ampm}`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 10000); // Update every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className={`relative mx-auto my-4 w-full max-w-[410px] aspect-[9/19] bg-stone-950 rounded-[55px] shadow-2xl border-[12px] border-stone-800 ring-4 ring-stone-900/40 p-2 flex flex-col overflow-hidden select-none select-text ${className}`} id="phone-wrapper">
+      {/* Dynamic Island / Camera Notch */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 h-7 w-32 bg-black rounded-full z-50 flex items-center justify-between px-3.5 shadow-inner" id="phone-notch">
+        <div className="w-1.5 h-1.5 rounded-full bg-blue-900/40 border border-blue-500/20 shadow-inner"></div>
+        <div className="w-12 h-1 bg-neutral-900 rounded-full"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-zinc-900 border border-zinc-800/80 shadow-md"></div>
+      </div>
+
+      {/* Side physical buttons (visual decor) */}
+      <div className="absolute left-[-15px] top-28 w-[3.5px] h-10 bg-neutral-700 rounded-r-sm shadow"></div>
+      <div className="absolute left-[-15px] top-40 w-[3.5px] h-14 bg-neutral-700 rounded-r-sm shadow"></div>
+      <div className="absolute left-[-15px] top-56 w-[3.5px] h-14 bg-neutral-700 rounded-r-sm shadow"></div>
+      <div className="absolute right-[-15px] top-36 w-[3.5px] h-20 bg-neutral-700 rounded-l-sm shadow"></div>
+
+      {/* Status Bar */}
+      <div className="h-10 px-6 pt-2 flex items-center justify-between text-neutral-300 text-xs font-medium z-40 bg-[#131314]" id="phone-status-bar">
+        <span className="text-[11px] font-semibold text-neutral-100">{time}</span>
+        <div className="flex items-center gap-1.5">
+          <Signal className="w-3.5 h-3.5 text-neutral-100" />
+          <Wifi className="w-3.5 h-3.5 text-neutral-100" />
+          <div className="flex items-center gap-0.5">
+            <Battery className="w-4 h-4 text-neutral-100" />
+            <span className="text-[9px] -mt-0.5 text-emerald-400">98%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* App bar (when not on main home screen or showing a secondary view inside phone) */}
+      {showBackButton && (
+        <div className="h-12 bg-[#131314] border-b border-zinc-800/50 flex items-center px-4 gap-2 z-40 shrink-0" id="phone-app-bar">
+          <button
+            onClick={onBack}
+            className="p-1 rounded-full hover:bg-zinc-800 transition-colors text-yellow-400 cursor-pointer"
+            id="back-btn"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <span className="text-sm font-semibold text-neutral-200 truncate">{title}</span>
+        </div>
+      )}
+
+      {/* Phone Screen Screen Content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#131314] rounded-[42px] flex flex-col relative" id="phone-screen-content">
+        {children}
+      </div>
+
+      {/* Home Swipe Bar helper */}
+      <div className="absolute bottom-1 w-28 h-1 bg-zinc-500/55 rounded-full left-1/2 -translate-x-1/2 z-50 pointer-events-none"></div>
+    </div>
+  );
+}

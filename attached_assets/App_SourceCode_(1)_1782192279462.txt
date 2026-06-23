@@ -1,0 +1,1549 @@
+import React, { useState, useEffect } from "react";
+import { 
+  Bell, 
+  HelpCircle, 
+  LogOut, 
+  MessageCircle, 
+  Eye, 
+  EyeOff, 
+  ChevronRight, 
+  FileText, 
+  Sparkles, 
+  QrCode, 
+  Wallet, 
+  Home, 
+  Compass, 
+  Settings, 
+  CreditCard,
+  Target,
+  Car,
+  ChevronLeft,
+  RefreshCw,
+  TrendingUp,
+  Award,
+  CircleHelp,
+  CornerDownRight,
+  ShieldCheck,
+  User,
+  HeartHandshake,
+  CheckCircle2
+} from "lucide-react";
+
+import PhoneContainer from "./components/PhoneContainer";
+import ChatAssistant from "./components/ChatAssistant";
+import MovementsView from "./components/MovementsView";
+import TransferView from "./components/TransferView";
+import PayBillView from "./components/PayBillView";
+import QRView from "./components/QRView";
+import BolsillosView from "./components/BolsillosView";
+import { BankAccount, BankMovement, Bolsillo } from "./types";
+import { jsPDF } from "jspdf";
+
+export default function App() {
+  // Primary Bank states
+  const [userName, setUserName] = useState("Alejandra");
+  const [accounts, setAccounts] = useState<BankAccount[]>([
+    {
+      id: "ahorros-01",
+      name: "Mi Cuenta Bancolombia 001...",
+      type: "Ahorros",
+      number: "Ahorros 01 - 2345678 - 90",
+      balance: 2654112
+    },
+    {
+      id: "corriente-01",
+      name: "Mi Cuenta Corriente 505...",
+      type: "Corriente",
+      number: "Corriente 02 - 9876543 - 21",
+      balance: 1420000
+    }
+  ]);
+
+  const [movements, setMovements] = useState<BankMovement[]>([
+    {
+      id: "mov-1",
+      description: "Salario Nómina Bancolombia",
+      amount: 3200000,
+      date: "23 Jun 2026",
+      category: "Nómina",
+      type: "ingreso"
+    },
+    {
+      id: "mov-2",
+      description: "Compra en D1 El Poblado",
+      amount: 48500,
+      date: "22 Jun 2026",
+      category: "Mercado",
+      type: "egreso"
+    },
+    {
+      id: "mov-3",
+      description: "Pago de Luz EPM",
+      amount: 120000,
+      date: "21 Jun 2026",
+      category: "Servicios",
+      type: "egreso"
+    },
+    {
+      id: "mov-4",
+      description: "Transferencia Recibida (Mamá)",
+      amount: 150000,
+      date: "20 Jun 2026",
+      category: "Transferencia",
+      type: "ingreso"
+    },
+    {
+      id: "mov-5",
+      description: "Suscripción Netflix",
+      amount: 44900,
+      date: "19 Jun 2026",
+      category: "Entretenimiento",
+      type: "egreso"
+    },
+    {
+      id: "mov-6",
+      description: "Cine Colombia Sala Imax",
+      amount: 35000,
+      date: "18 Jun 2026",
+      category: "Entretenimiento",
+      type: "egreso"
+    }
+  ]);
+
+  const [bolsillos, setBolsillos] = useState<Bolsillo[]>([
+    {
+      id: "bol-1",
+      name: "Vacaciones San Andrés",
+      targetAmount: 1800000,
+      savedAmount: 450000,
+      category: "Viajes"
+    },
+    {
+      id: "bol-2",
+      name: "Arriendo Julio",
+      targetAmount: 950000,
+      savedAmount: 950000,
+      category: "Hogar"
+    }
+  ]);
+
+  // View states
+  const [activeTab, setActiveTab] = useState<"inicio" | "transacciones" | "explorar" | "tramites" | "ajustes">("inicio");
+  const [activeSubScreen, setActiveSubScreen] = useState<
+    "none" | "movements" | "transfer" | "pay-bill" | "pockets" | "qr-scan" | "credit-calc" | "seguros" | "account-detail"
+  >("none");
+  const [saldosHided, setSaldosHided] = useState(false);
+  const [activeAccountIdx, setActiveAccountIdx] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Function to download PDF and Code
+  const handleDownloadSpecificationAndCode = async () => {
+    try {
+      setIsDownloading(true);
+      // Fetch full source codes from the server setup
+      const res = await fetch("/api/get-source-code");
+      const data = await res.json();
+      
+      const appCode = data.appCode || "// No pudimos leer App.tsx";
+      const phoneContainerCode = data.phoneContainerCode || "// No pudimos leer PhoneContainer.tsx";
+      const indexCssCode = data.indexCssCode || "/* No pudimos leer index.css */";
+      const typesCode = data.typesCode || "/* No pudimos leer types.ts */";
+
+      // 1. Generate premium jsPDF
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      // Typography and styling helper
+      const titleColor = "#111111";
+      const primaryYellow = "#FED201";
+      const darkBgHex = "#131314";
+
+      // PAGE 1: Specification
+      doc.setFillColor(19, 19, 20); // dark background for covers/highlights
+      doc.rect(0, 0, 210, 297, "F");
+
+      // Draw Colombian stripe
+      doc.setFillColor(254, 210, 1); // Yellow
+      doc.rect(0, 0, 210, 8, "F");
+      doc.setFillColor(0, 100, 180); // Blue
+      doc.rect(0, 8, 210, 5, "F");
+      doc.setFillColor(200, 16, 46); // Red
+      doc.rect(0, 13, 210, 3, "F");
+
+      // Logo/Header
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("PORTAL REPLICA BANCOLOMBIA", 15, 35);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(254, 210, 1);
+      doc.setFontSize(11);
+      doc.text("Documentacion de UI, Elementos de Diseno y Codigo de React Integrado", 15, 42);
+
+      doc.setDrawColor(80, 80, 80);
+      doc.line(15, 48, 195, 48);
+
+      // Section 1: Color Palette
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("1. Paleta de Colores de Alta Fidelidad", 15, 58);
+
+      // Color Blocks
+      const drawColorBlock = (x: number, y: number, r: number, g: number, b: number, hex: string, name: string) => {
+        doc.setFillColor(r, g, b);
+        doc.rect(x, y, 12, 12, "F");
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(x, y, 12, 12, "S");
+        doc.setTextColor(230, 230, 230);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(name, x + 16, y + 5);
+        doc.setTextColor(170, 170, 170);
+        doc.setFont("helvetica", "normal");
+        doc.text(hex, x + 16, y + 10);
+      };
+
+      drawColorBlock(15, 64, 254, 210, 1, "#FED201", "Amarillo Bancolombia (Primario)");
+      drawColorBlock(110, 64, 19, 19, 20, "#131314", "Negro de Fondo (Phone Canvas)");
+      
+      drawColorBlock(15, 80, 33, 34, 36, "#212224", "Gris de Tarjetas (Cards)");
+      drawColorBlock(110, 80, 0, 234, 144, "#00EA90", "Verde Vibrante (Detalles/Arcos)");
+
+      drawColorBlock(15, 96, 144, 92, 245, "#905CF5", "Violeta Arcos (Arcos/Sombras)");
+      drawColorBlock(110, 96, 255, 122, 26, "#FF7A1A", "Naranja Gradiente (Arcos/Degradados)");
+
+      // Section 2: Fonts & Weights
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("2. Tipografias y Dimensiones de Textos", 15, 120);
+
+      // Specs
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(215, 215, 215);
+      const textSpecs = [
+        "- Letra Titulo Principal (Bancolombia): 'Inter' o 'Space Grotesk' Sans, Bold, tamano 19.5px,Tracking apretado.",
+        "- Saldos y Cifras Numericas: Fuente Monospace 'JetBrains Mono' o similar, en tamano 26.5px para saldo principal,",
+        "  con decimales ',00' reducidos a tamano 14px en la parte superior.",
+        "- Enlaces de Navegacion Inferior: Tamano 9.5px, medianamente negrita, espaciado entre iconos optimoque garantiza 44px.",
+        "- Texto Accesorio / Clave Dinamica: Gris claro contrastado (#A1A1AA) para evitar fatiga visual, tamano 11px.",
+        "- Botones Primarios (Acento Amarillo): Tamano 12.5px con esquinas totalmente redondeadas (rounded-full).",
+        "- Modulos e Iconografia: Iconos de 'lucide-react' a un tamano uniforme de 20px o 21px y grosor de trazo de 1.8."
+      ];
+      let currentY = 127;
+      textSpecs.forEach(line => {
+        doc.text(line, 15, currentY);
+        currentY += 6;
+      });
+
+      // Section 3: Visual Elements & Signals
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("3. Elementos de la Replica e Identificacion de la Imagen Original", 15, 178);
+
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(215, 215, 215);
+      const elementsSpecs = [
+        "- Arcos Decorativos (Parte Superior): Renderizados mediando Curvas de Bezier en un contenedor SVG absoluto,",
+        "  imitando las formas dinamicas oficiales del fondo corporativo, cruzando tonos con trazos solidos y opacidades.",
+        "- Logotipo de Marca: Simbolizado con 3 ondas representativas en amarillo, blanco y un tono verde degradado.",
+        "- Clave Dinamica Activa: Modulo interactivo con un boton de progreso circular y candado central que cambia",
+        "  cada 30 segundos, simulando la generacion real con cuenta regresiva sincrona.",
+        "- Slider Swipable de Cuentas: Carrusel interactivo que permite alternar la visual de cuentas, con tarjetas peeking",
+        "  laterales y puntos de navegacion fluida.",
+        "- Accesos Directos (Transacciones principales): Matriz cuadriculada con hover dinamico y click simulado."
+      ];
+      currentY = 185;
+      elementsSpecs.forEach(line => {
+        doc.text(line, 15, currentY);
+        currentY += 6;
+      });
+
+      // Foot note on page 1
+      doc.setFontSize(8);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Replica de Interfaz Bancolombia - Generado por AI Studio Build. Documento 1 de 2.", 15, 285);
+
+      // PAGE 2: SOURCE CODE INFRASTRUCTURE & REPLICABILITY
+      doc.addPage();
+      doc.setFillColor(25, 26, 28); // lighter programming background
+      doc.rect(0, 0, 210, 297, "F");
+
+      // Draw Colombian stripe again
+      doc.setFillColor(254, 210, 1);
+      doc.rect(0, 0, 210, 4, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("4. Guia de Implementacion y Codigo Listo para Copiar", 15, 20);
+
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(210, 210, 210);
+      doc.text("Abajo encontraras el codigo central de la aplicacion que replica cada aspecto de la imagen original.", 15, 27);
+      doc.text("Este codigo fue empaquetado en un archivo ZIP/TXT adjunto descargable o impreso en el PDF.", 15, 32);
+
+      // Small Code Preview
+      doc.setFillColor(15, 15, 16);
+      doc.rect(15, 38, 180, 105, "F");
+      doc.setDrawColor(60, 60, 60);
+      doc.rect(15, 38, 180, 105, "S");
+
+      doc.setFont("courier", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(254, 210, 1);
+      doc.text("// SEGMENTO DEL CORE DE LA REPLICA (App.tsx UI Layout)", 20, 44);
+
+      doc.setFont("courier", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(190, 190, 190);
+      const codeLinesPreview = [
+        "return (",
+        "  <div id=\"brand-logo-area\" className=\"flex items-center gap-1.5 font-sans\">",
+        "    <svg className=\"w-5.5 h-4 shrink-0 -mt-0.5\" viewBox=\"0 0 24 16\" fill=\"none\">",
+        "      <path d=\"M2.5,3 C8.5,1.2 15.5,5.2 21.5,3\" stroke=\"white\" strokeWidth=\"2.8\" />",
+        "      <path d=\"M2.5,8 C8.5,6.2 15.5,10.2 21.5,8\" stroke=\"#FED201\" strokeWidth=\"2.8\" />",
+        "      <path d=\"M2.5,13 C8.5,11.2 15.5,15.2 21.5,13\" stroke=\"white\" strokeWidth=\"1.6\" strokeOpacity=\"0.4\" />",
+        "    </svg>",
+        "    <span className=\"text-white font-bold text-[19.5px] tracking-tight\">Bancolombia</span>",
+        "  </div>",
+        "  // Modulo de carrusel interactivo",
+        "  <div className=\"flex gap-3.5 overflow-x-auto snap-x snap-mandatory scrollbar-none px-1\">",
+        "    {accounts.map((acc, idx) => (",
+        "       <div key={acc.id} className=\"w-[88%] shrink-0 snap-center bg-[#212224]\">",
+        "         ...",
+        "       </div>",
+        "    ))}",
+        "  </div>",
+        ")"
+      ];
+      let codeY = 51;
+      codeLinesPreview.forEach(cl => {
+        doc.text(cl, 20, codeY);
+        codeY += 4.5;
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(255, 255, 255);
+      doc.text("5. Instrucciones para la Exportacion del Codigo Fuente", 15, 155);
+
+       doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(200, 200, 200);
+      const stepsCode = [
+        "Junto con este PDF, tu navegador ha recibido una descarga automatica de un archivo comprimido o",
+        "bloques de codigo completos en formato (.txt) de los siguientes archivos claves:",
+        "  1. 'App.tsx' - El controlador de estados completo, el asistente de IA y las vistas simuladas.",
+        "  2. 'PhoneContainer.tsx' - El marco movil adaptativo con look and feel del dispositivo fisico.",
+        "  3. 'index.css' - La configuracion de importacion de fuentes y las directivas de diseno de Tailwind CSS.",
+        "  4. 'types.ts' - Las definciones de interfaces de datos (Cuentas, Movimientos, Bolsillos)."
+      ];
+      let stepsY = 162;
+      stepsCode.forEach(st => {
+        doc.text(st, 15, stepsY);
+        stepsY += 5.5;
+      });
+
+      doc.setFillColor(254, 210, 1);
+      doc.rect(15, 205, 180, 22, "F");
+      doc.setTextColor(19, 19, 20);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("SOPORTE PARA COPIADO DE CODIGO RAPIDO:", 20, 211);
+      doc.setFont("helvetica", "normal");
+      doc.text("Tambien puedes acceder al menu de AI Studio Build en la esquina superior derecha y seleccionar", 20, 216);
+      doc.text("'Export ZIP' para descargar de forma integra el repositorio de desarrollo.", 20, 221);
+
+      // Foot note on page 2
+      doc.setFontSize(8);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Replica de Interfaz Bancolombia - Generado por AI Studio Build. Documento 2 de 2.", 15, 285);
+
+      // Save PDF
+      doc.save(`replica_bancolombia_detalles_diseno.pdf`);
+
+      // 2. Download Clean Source Codes as TXT Files
+      const downloadTextFile = (filename: string, content: string) => {
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      downloadTextFile("App_SourceCode.txt", appCode);
+      downloadTextFile("PhoneContainer_SourceCode.txt", phoneContainerCode);
+      downloadTextFile("indexCss_SourceCode.txt", indexCssCode);
+      downloadTextFile("types_SourceCode.txt", typesCode);
+
+      alert("🎉 ¡Descarga completada! El navegador descargó el documento de especificación PDF junto con archivos individuales conteniendo el código fuente completo de la interfaz de la replica.");
+    } catch (err: any) {
+      console.error(err);
+      alert("Hubo un problema al recopilar el código fuente. Se descargará el PDF únicamente.");
+      // Fallback only PDF
+      try {
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text("Replica Portal Bancolombia - Especificación Visual", 15, 20);
+        doc.setFontSize(11);
+        doc.text("No se pudo obtener el código en vivo, pero aquí tienes el PDF de especificaciones de colores:", 15, 30);
+        doc.text("- Amarillo Bancolombia: #FED201", 15, 40);
+        doc.text("- Fondo Oscuro: #131314", 15, 46);
+        doc.text("- Tarjetas: #212224", 15, 52);
+        doc.save(`replica_bancolombia_colores.pdf`);
+      } catch (innerErr) {
+        alert("No se pudo generar el fallback de PDF.");
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Dynamic Key Clave Dinámica simulator state
+  const [dynamicKey, setDynamicKey] = useState("137 849");
+  const [countdown, setCountdown] = useState(30);
+
+  // Credit calculator local state
+  const [loanAmount, setLoanAmount] = useState("50.000.000");
+  const [loanTerm, setLoanTerm] = useState("15"); // years
+  const [loanResult, setLoanResult] = useState<number | null>(null);
+
+  // Auto tick countdown loader for Clave Dinámica
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Generate new dynamic key
+          const part1 = Math.floor(100 + Math.random() * 900);
+          const part2 = Math.floor(100 + Math.random() * 900);
+          setDynamicKey(`${part1} ${part2}`);
+          return 30; // reset
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate mortgage results
+  useEffect(() => {
+    const rawAmt = parseFloat(loanAmount.replace(/\./g, "")) || 0;
+    const years = parseInt(loanTerm) || 15;
+    const monthlyRate = 0.011; // ~13.2% EA interest rate
+    const months = years * 12;
+    if (rawAmt > 0 && months > 0) {
+      const payment = (rawAmt * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
+      setLoanResult(Math.round(payment));
+    } else {
+      setLoanResult(null);
+    }
+  }, [loanAmount, loanTerm]);
+
+  // Execute actual transfer transaction
+  const handleExecuteTransfer = (
+    fromAccId: string, 
+    amount: number, 
+    destAccountLabel: string, 
+    desc: string
+  ) => {
+    // 1. Subtract balance
+    setAccounts((prevAccs) =>
+      prevAccs.map((acc) =>
+        acc.id === fromAccId ? { ...acc, balance: acc.balance - amount } : acc
+      )
+    );
+
+    // 2. Append movement
+    const newMove: BankMovement = {
+      id: "mov-" + Date.now(),
+      description: `Transferido a ${destAccountLabel}`,
+      amount: amount,
+      date: "Hoy",
+      category: "Transferencia",
+      type: "egreso"
+    };
+
+    setMovements((prev) => [newMove, ...prev]);
+  };
+
+  // Execute bill payment transaction
+  const handleExecuteBillPayment = (company: string, amount: number, reference: string) => {
+    // Subtract from active account
+    setAccounts((prevAccs) =>
+      prevAccs.map((acc, idx) =>
+        idx === activeAccountIdx ? { ...acc, balance: acc.balance - amount } : acc
+      )
+    );
+
+    // Append movement log
+    const newMove: BankMovement = {
+      id: "mov-" + Date.now(),
+      description: `Pago de Factura: ${company}`,
+      amount: amount,
+      date: "Hoy",
+      category: "Servicios",
+      type: "egreso"
+    };
+
+    setMovements((prev) => [newMove, ...prev]);
+  };
+
+  // Update budget pocket saving amount
+  const handleUpdateBolsillo = (pocketId: string, updatedAmount: number) => {
+    const pocket = bolsillos.find((p) => p.id === pocketId);
+    if (!pocket) return;
+
+    const diff = updatedAmount - pocket.savedAmount;
+
+    // 1. Deduct or add from primary account active
+    setAccounts((prevAccs) =>
+      prevAccs.map((acc, idx) =>
+        idx === 0 ? { ...acc, balance: acc.balance - diff } : acc
+      )
+    );
+
+    // 2. Update Pocket
+    setBolsillos((prev) =>
+      prev.map((p) => (p.id === pocketId ? { ...p, savedAmount: updatedAmount } : p))
+    );
+
+    // 3. Append movement
+    const label = diff > 0 ? `Cargado a Bolsillo ${pocket.name}` : `Retirado de Bolsillo ${pocket.name}`;
+    const newMove: BankMovement = {
+      id: "mov-" + Date.now(),
+      description: label,
+      amount: Math.abs(diff),
+      date: "Hoy",
+      category: "Otros",
+      type: diff > 0 ? "egreso" : "ingreso"
+    };
+
+    setMovements((prev) => [newMove, ...prev]);
+  };
+
+  // Create a brand new bolsillo pocket
+  const handleAddBolsillo = (name: string, target: number, category: string) => {
+    const newPok: Bolsillo = {
+      id: "bol-" + Date.now(),
+      name: name,
+      targetAmount: target,
+      savedAmount: 0,
+      category: category
+    };
+    setBolsillos((prev) => [...prev, newPok]);
+  };
+
+  // Handlers for quick actions
+  const handleTriggerQRScanSuccess = (amount: number, merchant: string, accountNum: string) => {
+    // QR codes pay automatically triggers a transfer subtract
+    handleExecuteTransfer(accounts[0].id, amount, merchant, `Pago QR Datáfono`);
+    setActiveSubScreen("none");
+    alert(`¡Pago de $${amount.toLocaleString("es-CO")} COP a ${merchant} realizado con éxito!`);
+  };
+
+  // Reset demo state
+  const handleHardResetSimulator = () => {
+    if (confirm("¿Deseas restablecer los montos de dinero de la simulación original de Alejandra?")) {
+      setAccounts([
+        {
+          id: "ahorros-01",
+          name: "Mi Cuenta Bancolombia 001...",
+          type: "Ahorros",
+          number: "Ahorros 01 - 2345678 - 90",
+          balance: 2654112
+        },
+        {
+          id: "corriente-01",
+          name: "Mi Cuenta Corriente 505...",
+          type: "Corriente",
+          number: "Corriente 02 - 9876543 - 21",
+          balance: 1420000
+        }
+      ]);
+      setBolsillos([
+        {
+          id: "bol-1",
+          name: "Vacaciones San Andrés",
+          targetAmount: 1800000,
+          savedAmount: 450000,
+          category: "Viajes"
+        },
+        {
+          id: "bol-2",
+          name: "Arriendo Julio",
+          targetAmount: 950000,
+          savedAmount: 950000,
+          category: "Hogar"
+        }
+      ]);
+      alert("Portal restablecido exitosamente.");
+    }
+  };
+
+  const handleMaskToggle = () => {
+    setSaldosHided(!saldosHided);
+  };
+
+  const activeAcc = accounts[activeAccountIdx];
+
+  const formatCurrency = (val: number) => {
+    if (saldosHided) return "$ ••••••••";
+    return `$ ${val.toLocaleString("es-CO")},00`;
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-100 flex flex-col md:flex-row items-center justify-center p-4 md:p-8 font-sans gap-8 max-w-7xl mx-auto" id="app-workspace">
+      
+      {/* LEFT SIDE: Workspace info pane */}
+      <div className="flex-1 max-w-md space-y-5 text-zinc-800" id="info-side-panel">
+        <div className="space-y-1.5Packed">
+          <div className="w-12 h-12 bg-yellow-400 border border-yellow-500 rounded-2xl flex items-center justify-center text-stone-900 font-extrabold text-xl shadow-md">
+            B
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">
+            Portal Móvil Bancolombia
+          </h1>
+          <p className="text-xs text-zinc-500 font-medium">
+            Simulador de alta fidelidad basado en el diseño oficial de la app del banco.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-4 text-xs space-y-3.5">
+          <h2 className="font-bold text-stone-900 flex items-center gap-1.5 pb-2.5 border-b border-zinc-100">
+            <Sparkles className="w-4 h-4 text-yellow-500 fill-yellow-500" /> Características de la Simulación
+          </h2>
+          
+          <div className="space-y-3">
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-stone-100 flex items-center justify-center font-bold text-stone-700 text-[10px]">1</div>
+              <p className="text-zinc-600 leading-normal">
+                <strong>Clave Dinámica:</strong> Código cambiante en tiempo real con arco degradado de color y un contador animado de 30 segundos.
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-stone-100 flex items-center justify-center font-bold text-stone-700 text-[10px]">2</div>
+              <p className="text-zinc-600 leading-normal">
+                <strong>Ocultar saldos:</strong> El botón del menú principal enmascara los saldos de forma global con transiciones fluidas.
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-stone-100 flex items-center justify-center font-bold text-stone-700 text-[10px]">3</div>
+              <p className="text-zinc-600 leading-normal">
+                <strong>Carrusel de Cuentas:</strong> Desliza o haz clic para alternar entre Cuenta de Ahorros y Cuenta Corriente con paginación premium.
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-[#121212] flex items-center justify-center text-yellow-400 font-bold text-[10.5px]">AI</div>
+              <p className="text-zinc-600 leading-normal">
+                <strong>Lector de Facturas Inteligente:</strong> ¡Sube una imagen de recibo! La IA (Gemini 3.1 Pro) leerá, interpretará y completará el pago automáticamente.
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded-md bg-[#121212] flex items-center justify-center text-yellow-400 font-bold text-[10.5px]">AI</div>
+              <p className="text-zinc-600 leading-normal">
+                <strong>Asistente Tabby:</strong> Chatea por lenguaje natural en la pestaña central "Trámites". Puedes pedirle consejos financieros o explicaciones de forma interactiva.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-yellow-400/10 border border-yellow-400/20 p-3 rounded-2xl flex items-start gap-2 text-[10px]">
+            <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span className="text-amber-900 font-medium">
+              Esta es una simulación corporativa educativa de Bancolombia. Ninguna transacción altera registros reales de cuentas oficiales o tarjetas.
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-1.5 pt-2">
+            <button
+              onClick={handleHardResetSimulator}
+              className="px-3 py-2 bg-stone-900 border border-stone-800 text-white rounded-lg hover:bg-stone-800 transition-all text-[10px] font-bold cursor-pointer whitespace-nowrap"
+            >
+              🔄 Restablecer Balances
+            </button>
+            <button
+              onClick={handleDownloadSpecificationAndCode}
+              disabled={isDownloading}
+              className="px-3 py-2 bg-[#FED201] text-stone-950 font-bold rounded-lg hover:bg-yellow-400 transition-all text-[10px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin"></span>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  📥 Descargar Guía y Código (PDF y Código)
+                </>
+              )}
+            </button>
+            <a
+              href="https://ai.studio/build"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 border border-zinc-200 text-zinc-500 rounded-lg text-[10px] font-medium block hover:bg-zinc-50 text-center flex-1"
+            >
+              Creado de forma segura con AI Studio Build
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Dedicated Phone container */}
+      <div className="flex-1 flex justify-center w-full max-w-[420px]" id="simulator-phone-wrapper">
+        <PhoneContainer
+          showBackButton={activeSubScreen !== "none"}
+          title={
+            activeSubScreen === "movements" ? "Saldos y Movimientos" :
+            activeSubScreen === "transfer" ? "Enviar Dinero" :
+            activeSubScreen === "pay-bill" ? "Pagar Recibos" :
+            activeSubScreen === "pockets" ? "Bolsillos de Ahorro" :
+            activeSubScreen === "qr-scan" ? "Escáner de código QR" : 
+            activeSubScreen === "credit-calc" ? "Asesor de Crédito" :
+            activeSubScreen === "seguros" ? "Seguros para tí" :
+            activeSubScreen === "account-detail" ? "Detalles de Cuenta" : ""
+          }
+          onBack={() => {
+            setActiveSubScreen("none");
+            // If they were on a tab trigger, don't break the navigation state
+          }}
+        >
+          
+          {/* 1. LAYER SUB SCREENS OVERLAYS */}
+          {activeSubScreen === "movements" && (
+            <MovementsView
+              movements={movements}
+              onClose={() => setActiveSubScreen("none")}
+            />
+          )}
+
+          {activeSubScreen === "transfer" && (
+            <TransferView
+              accounts={accounts}
+              onExecuteTransfer={handleExecuteTransfer}
+              onClose={() => setActiveSubScreen("none")}
+            />
+          )}
+
+          {activeSubScreen === "pay-bill" && (
+            <PayBillView
+              accounts={accounts}
+              onExecuteBillPayment={handleExecuteBillPayment}
+              onClose={() => setActiveSubScreen("none")}
+            />
+          )}
+
+          {activeSubScreen === "pockets" && (
+            <BolsillosView
+              accounts={accounts}
+              bolsillos={bolsillos}
+              onUpdateBolsillo={handleUpdateBolsillo}
+              onAddBolsillo={handleAddBolsillo}
+              onClose={() => setActiveSubScreen("none")}
+            />
+          )}
+
+          {activeSubScreen === "qr-scan" && (
+            <QRView
+              onScanSuccess={handleTriggerQRScanSuccess}
+              onClose={() => setActiveSubScreen("none")}
+            />
+          )}
+
+          {/* Simulated Mortgage calculator Category item */}
+          {activeSubScreen === "credit-calc" && (
+            <div className="flex flex-col h-full bg-[#121212] p-4 text-neutral-200 justify-between shrink-0" id="credit-mortgage-panel">
+              <div className="space-y-4">
+                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-center space-y-1.5">
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">Simulador de Vivienda</span>
+                  <h3 className="text-sm font-bold text-neutral-200">Crédito de Vivienda Bancolombia</h3>
+                  <p className="text-emerald-400 font-bold text-xs">Tasa Preferencial del 1.1% Mes Vencido</p>
+                </div>
+
+                <div className="space-y-3 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/60 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-500 uppercase font-bold">Monto a Financiar (COP)</label>
+                    <input
+                      type="text"
+                      value={loanAmount}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, "");
+                        setLoanAmount(clean ? parseInt(clean).toLocaleString("es-CO") : "");
+                      }}
+                      className="w-full bg-zinc-950 px-3 py-2 rounded-xl text-neutral-200 border border-zinc-800 focus:outline-none focus:border-yellow-400 font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-zinc-500 uppercase font-bold">Plazo de Financiación (Años)</label>
+                    <select
+                      value={loanTerm}
+                      onChange={(e) => setLoanTerm(e.target.value)}
+                      className="w-full bg-zinc-950 px-3 py-2.5 rounded-xl text-neutral-200 border border-zinc-800 focus:outline-none focus:border-yellow-400"
+                    >
+                      <option value="5">5 Años</option>
+                      <option value="10">10 Años</option>
+                      <option value="15">15 Años</option>
+                      <option value="20">20 Años</option>
+                      <option value="30">30 Años</option>
+                    </select>
+                  </div>
+                </div>
+
+                {loanResult !== null && (
+                  <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800/80 text-center space-y-1">
+                    <span className="text-[9px] text-zinc-500 uppercase block">Cuota Mensual Estimada</span>
+                    <span className="text-lg font-bold font-mono text-yellow-400">${loanResult.toLocaleString("es-CO")} COP</span>
+                    <span className="text-[8px] text-zinc-600 block pt-0.5">*No incluye seguros de deudores ni de incendio del inmueble.</span>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  alert("Solicitud simulada enviada. Un asesor ficticio del banco te llamará pronto.");
+                  setActiveSubScreen("none");
+                }}
+                className="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-black font-bold uppercase rounded-xl text-xs tracking-wider transition-all mt-4"
+              >
+                Solicitar Viabilidad
+              </button>
+            </div>
+          )}
+
+          {/* Simulated Insurance category screen */}
+          {activeSubScreen === "seguros" && (
+            <div className="flex flex-col h-full bg-[#121212] p-4 text-neutral-200 justify-between shrink-0" id="seguros-panel">
+              <div className="space-y-4">
+                <p className="text-zinc-400 text-xs text-center leading-normal">
+                  Protege lo que más quieres con nuestras opciones de seguros virtuales con cobro mensual directo desde tu saldo.
+                </p>
+
+                <div className="space-y-2.5">
+                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                    <h4 className="font-bold text-xs text-yellow-400">🚗 Seguro Auto Protegido</h4>
+                    <p className="text-[10px] text-zinc-400 leading-normal">Cobertura total contra choques, robos y asistencia en grúa las 24 horas.</p>
+                    <span className="text-[9px] font-mono font-bold text-[#FED201] block pt-1">Desde $45,000 COP / mes</span>
+                  </div>
+                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                    <h4 className="font-bold text-xs text-yellow-400">🏥 Seguro Vida Familiar</h4>
+                    <p className="text-[10px] text-zinc-400 leading-normal">Respaldo económico completo para tus familiares y gastos de repatriación.</p>
+                    <span className="text-[9px] font-mono font-bold text-[#FED201] block pt-1">Desde $28,000 COP / mes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-2">
+                <button
+                  onClick={() => {
+                    alert("¡Gracias por registrar tu interés en nuestros Seguros!");
+                    setActiveSubScreen("none");
+                  }}
+                  className="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-black font-bold uppercase rounded-xl text-xs tracking-wide cursor-pointer text-center"
+                >
+                  Adquirir Seguro Simulado
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Account Detail modal drawer */}
+          {activeSubScreen === "account-detail" && (
+            <div className="flex flex-col h-full bg-[#121212] text-neutral-200 justify-between shrink-0 p-4" id="acc-detail-panel">
+              <div className="space-y-4">
+                <div className="text-center py-2 border-b border-zinc-800 pb-4">
+                  <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-yellow-400 mx-auto mb-2 font-mono font-bold">
+                    $
+                  </div>
+                  <h3 className="font-bold text-xs text-neutral-300">Resumen Oficial de Cuenta</h3>
+                  <p className="text-[9px] text-zinc-500 font-mono">{activeAcc.number}</p>
+                </div>
+
+                <div className="space-y-2.5 text-xs bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/60">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Tipo de Producto:</span>
+                    <span className="font-semibold text-neutral-300">{activeAcc.type} Bancolombia</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Estado de Cuenta:</span>
+                    <span className="font-semibold text-emerald-400">Activo / Exento de GMF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Moneda Autorizada:</span>
+                    <span className="font-semibold text-neutral-300">COP (Pesos Colombianos)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Saldo Disponible:</span>
+                    <span className="font-semibold font-mono text-neutral-200">{formatCurrency(activeAcc.balance)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Canjes / Retención:</span>
+                    <span className="font-semibold font-mono text-zinc-500">$ 0 COP</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-zinc-950 rounded-xl space-y-1 border border-zinc-900">
+                  <h5 className="font-bold text-[10px] text-neutral-400 block">Beneficio Tributario de Exención:</h5>
+                  <p className="text-[9.5px] leading-relaxed text-zinc-500">
+                    Esta cuenta se encuentra marcada como exenta del cobro del gravamen a los movimientos financieros (4x1000) de acuerdo con el estatuto tributario colombiano.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <button
+                  onClick={() => alert("Simulado: Descarga de extracto bancario en PDF completado.")}
+                  className="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-yellow-400 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  Descargar Extractos (PDF)
+                </button>
+                <button
+                  onClick={() => setActiveSubScreen("none")}
+                  className="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-black font-bold uppercase rounded-xl text-xs tracking-wider cursor-pointer"
+                >
+                  Cerrar Detalles
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 1: INICIO (FAITHFUL IMAGE CLONE VIEW) */}
+          {activeTab === "inicio" && activeSubScreen === "none" && (
+            <div className="flex-1 flex flex-col p-4 space-y-5 relative select-none bg-[#131314]" id="home-view-replica">
+              
+              {/* BRAND HEADER LINE (Bancolombia + alerts) */}
+              <div className="flex items-center justify-between z-10 pt-2 shrink-0 mb-1" id="home-replica-header">
+                {/* Real Bancolombia wavy logo marks */}
+                <div className="flex items-center gap-1.5 font-sans" id="brand-logo-area">
+                  <svg className="w-5.5 h-4 shrink-0 -mt-0.5" viewBox="0 0 24 16" fill="none" opacity="0.95">
+                    <path d="M2.5,3 C8.5,1.2 15.5,5.2 21.5,3" stroke="white" strokeWidth="2.8" strokeLinecap="round" />
+                    <path d="M2.5,8 C8.5,6.2 15.5,10.2 21.5,8" stroke="#FED201" strokeWidth="2.8" strokeLinecap="round" />
+                    <path d="M2.5,13 C8.5,11.2 15.5,15.2 21.5,13" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.4" />
+                  </svg>
+                  <span className="text-white font-bold text-[19.5px] tracking-tight shrink-0 leading-none">Bancolombia</span>
+                </div>
+
+                {/* Right controls */}
+                <div className="flex items-center gap-4 text-white" id="header-replica-icons">
+                  <button className="hover:text-yellow-400 cursor-pointer text-zinc-100 animate-pulse" onClick={() => alert("No tienes notificaciones de momento.")}>
+                    <Bell className="w-[21px] h-[21px] stroke-[1.8]" />
+                  </button>
+                  <button className="hover:text-yellow-400 cursor-pointer text-zinc-100" onClick={() => alert("Asistencia: Selecciona 'Trámites' para chatear con nuestro Asistente de IA.")}>
+                    <svg className="w-[21px] h-[21px] stroke-[1.8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </button>
+                  <button className="hover:text-yellow-400 cursor-pointer text-zinc-100" onClick={() => alert("Soporte WhatsApp Bancolombia...")}>
+                    {/* Perfect WhatsApp logo with headset outline */}
+                    <svg className="w-[21px] h-[21px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                      <path d="M9 10a2.5 2.5 0 0 1 4 2c-.5 1-1 1.5-2 2" strokeWidth="1.6" />
+                    </svg>
+                  </button>
+                  <button className="hover:text-red-400 cursor-pointer text-zinc-100" onClick={handleHardResetSimulator} title="Restablecer simulación">
+                    <svg className="w-[21px] h-[21px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* WELCOME GREETING WITH chevron arrow */}
+              <div className="flex items-center gap-1.5 z-10 shrink-0 cursor-pointer pl-1 mt-3" id="replica-user-greeting" onClick={() => {
+                const updatedName = prompt("Ingresa el nuevo nombre del usuario para el saludo personalizado:", userName);
+                if (updatedName && updatedName.trim()) setUserName(updatedName.trim());
+              }}>
+                <h2 className="text-[27px] font-normal text-white tracking-tight font-sans">Hola, {userName}</h2>
+                <svg className="w-6 h-6 text-white/95 self-center mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+
+              {/* NEON COLORED PORTAL TRACKS ARCS IN BACKGROUND - EXACT PIXEL PERFECT REF REPRESENTATION */}
+              <div className="absolute top-[96px] left-0 right-0 h-[130px] pointer-events-none overflow-hidden z-0" id="portal-arcs-bg">
+                <svg className="w-full h-full" viewBox="0 0 380 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Left tail peaks behind Clave Dinámica */}
+                  <path d="M -10,105 Q 15,95 32,118" stroke="#00f0ff" strokeWidth="3.2" strokeLinecap="round" />
+                  <path d="M -15,112 Q 10,102 26,125" stroke="#905cf5" strokeWidth="3.8" strokeLinecap="round" />
+
+                  {/* Outer Purple/Violet arc on top right */}
+                  <path d="M 310,40 Q 340,48 365,85" stroke="#905cf5" strokeWidth="4" strokeLinecap="round" />
+
+                  {/* Green arc sweep starting from center left, curving up */}
+                  <path d="M 160,65 A 120 120 0 0 1 240,45" stroke="#00EA90" strokeWidth="5" strokeLinecap="round" />
+
+                  {/* Thick Yellow arc segment continuing the main top banner */}
+                  <path d="M 235,45 A 120 120 0 0 1 300,55" stroke="#FED201" strokeWidth="9.5" strokeLinecap="round" />
+
+                  {/* Thick Orange arc sweeping heavily down to the right */}
+                  <path d="M 295,52 A 100 100 0 0 1 375,105" stroke="#FF7A1A" strokeWidth="11.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              {/* CLAVE DINÁMICA DECORATIVE CAPSULE */}
+              <div className="relative self-start w-[52%] p-1.5 bg-[#212123] border border-zinc-800/80 rounded-full shadow-md shrink-0 z-10" id="clave-dinamica-swirl-card">
+                <div className="relative z-10 flex items-center gap-2.5" id="clave-dinamica-content">
+                  {/* Circular progress with padlock icon */}
+                  <div className="relative w-8 h-8 flex items-center justify-center shrink-0 pl-0.5">
+                    <svg className="absolute w-8 h-8 transform -rotate-90">
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r="12.5"
+                        stroke="#131314"
+                        strokeWidth="3"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="16"
+                        cy="16"
+                        r="12.5"
+                        stroke="#FED201"
+                        strokeWidth="3"
+                        fill="transparent"
+                        strokeDasharray={2 * Math.PI * 12.5}
+                        strokeDashoffset={2 * Math.PI * 12.5 * (1 - countdown / 30)}
+                        className="transition-all duration-1000 ease-linear"
+                      />
+                    </svg>
+                    <div className="w-[18px] h-[18px] bg-[#131314] rounded-full flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5 text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <span 
+                      className="text-[8.5px] text-zinc-400 font-medium block cursor-pointer hover:text-white transition-colors" 
+                      onClick={() => alert(`Esta es tu Clave Dinámica que se usa para autorizar transacciones. Se actualiza automáticamente cada 30 segundos, te restan ${countdown} segundos.`)}
+                    >
+                      Clave Dinámica
+                    </span>
+                    <span className="text-[13px] font-bold font-sans tracking-[0.06em] text-white -mt-0.5 leading-none">
+                      {dynamicKey}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* TUS CUENTAS TITLE WITH TOGGLE EYE */}
+              <div className="flex items-center justify-between shrink-0 z-10 pt-1 px-1" id="tus-cuentas-toggle-row">
+                <span className="text-zinc-300 font-medium text-xs font-sans">Tus cuentas</span>
+                <button 
+                  onClick={handleMaskToggle} 
+                  className="text-zinc-400 hover:text-neutral-200 text-[10.5px] font-sans flex items-center gap-1 cursor-pointer"
+                >
+                  {saldosHided ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      <span>Mostrar saldos</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                      <span>Ocultar saldos</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* SWIPABLE INTERACTIVE CAROUSEL ACCOUNT CARDS WITH PEEKING VIEW */}
+              <div className="space-y-3.5 shrink-0 z-10 animate-fade-in" id="accounts-carousel-area">
+                <div 
+                  className="flex gap-3.5 overflow-x-auto snap-x snap-mandatory scrollbar-none px-1" 
+                  id="accounts-slider-track"
+                  onScroll={(e) => {
+                    const container = e.currentTarget;
+                    const width = container.offsetWidth;
+                    const scrollLeft = container.scrollLeft;
+                    const index = Math.round(scrollLeft / (width * 0.88));
+                    if (index >= 0 && index < accounts.length && index !== activeAccountIdx) {
+                      setActiveAccountIdx(index);
+                    }
+                  }}
+                >
+                  {accounts.map((acc, idx) => (
+                    <div 
+                      key={acc.id}
+                      id={`account-card-${idx}`}
+                      className="w-[88%] shrink-0 snap-center bg-[#212224] border border-zinc-800/60 rounded-[20px] p-4 flex flex-col justify-between min-h-[155px] relative shadow-lg"
+                    >
+                      <div className="space-y-0.5">
+                        <div 
+                          onClick={() => setActiveSubScreen("account-detail")}
+                          className="flex justify-between items-center cursor-pointer hover:opacity-90 transition-opacity"
+                        >
+                          <h3 className="font-bold text-[14.5px] text-zinc-100 tracking-tight font-sans flex items-center gap-1">
+                            {acc.name}
+                            <svg className="w-4 h-4 text-zinc-400 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </h3>
+                        </div>
+                        <span className="text-[10.5px] text-zinc-400 font-sans block pl-0.5">{acc.number}</span>
+                      </div>
+
+                      <div className="py-2 text-right pr-1">
+                        <span className="text-[11px] text-zinc-400 block font-sans">Saldo disponible</span>
+                        <span className="text-[26.5px] font-bold text-white block tracking-tight pt-0.5 leading-none font-sans">
+                          {saldosHided ? (
+                            "$ ••••••••"
+                          ) : (
+                            <>
+                              $ {acc.balance.toLocaleString("es-CO")}
+                              <span className="text-[14px] font-medium align-super select-none">,00</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      <button 
+                        onClick={() => setActiveSubScreen("account-detail")}
+                        className="w-full py-2.5 bg-[#FED201] hover:bg-[#FED201]/90 text-[#131314] font-bold rounded-full text-[12.5px] font-sans cursor-pointer text-center transition-all border-none block tracking-wide"
+                      >
+                        Conoce más de tu cuenta
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Slider Page Dots */}
+                <div className="flex justify-center items-center gap-1.5 pt-0.5" id="carousel-bullets">
+                  {accounts.map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => {
+                        setActiveAccountIdx(idx);
+                        document.getElementById(`account-card-${idx}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                      }}
+                      className={`h-1.5 transition-all rounded-full ${
+                        activeAccountIdx === idx ? "w-6 bg-[#FED201]" : "w-1.5 bg-zinc-700 hover:bg-zinc-650"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* TRANSACCIONES PRINCIPALES GRID MODULE (4 Short cuts) */}
+              <div className="space-y-2.5 shrink-0 z-10" id="main-shortcuts-grid-area">
+                <span className="text-zinc-300 font-medium text-xs font-sans block pl-1 font-sans">Transacciones principales</span>
+                
+                <div className="grid grid-cols-4 gap-2 text-left" id="shortcuts-grid">
+                  
+                  {/* Button 1: Ver saldos y movimientos */}
+                  <button
+                    onClick={() => setActiveSubScreen("movements")}
+                    className="bg-[#212224] hover:bg-[#28292c] transition-all rounded-2xl p-3 flex flex-col justify-between min-h-[102px] cursor-pointer text-left shadow-sm border border-zinc-800/25 active:scale-[0.97]"
+                  >
+                    <div className="text-zinc-100 pl-0.5">
+                      <svg className="w-[20px] h-[20px] text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <circle cx="10" cy="15" r="3.2" fill="#FED201" stroke="#FED201" strokeWidth="0.5" />
+                        <text x="8.8" y="17" fill="black" fontSize="5.8" fontWeight="black" fontFamily="sans-serif">$</text>
+                      </svg>
+                    </div>
+                    <span className="text-[10px] leading-[1.2] font-sans font-normal text-zinc-300 pl-0.5">Ver saldos y movimientos</span>
+                  </button>
+
+                  {/* Button 2: Transferir plata */}
+                  <button
+                    onClick={() => setActiveSubScreen("transfer")}
+                    className="bg-[#212224] hover:bg-[#28292c] transition-all rounded-2xl p-3 flex flex-col justify-between min-h-[102px] cursor-pointer text-left shadow-sm border border-zinc-800/25 active:scale-[0.97]"
+                  >
+                    <div className="text-zinc-100 pl-0.5">
+                      <svg className="w-[20px] h-[20px] text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11" fill="none" />
+                        <line x1="11" y1="13" x2="21" y2="3" stroke="#FED201" strokeWidth="1.8" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] leading-[1.2] font-sans font-normal text-zinc-300 pl-0.5">Transferir plata</span>
+                  </button>
+
+                  {/* Button 3: Pagar tarjetas y créditos */}
+                  <button
+                    onClick={() => {
+                      const proceed = confirm("Simular cobro pendiente: ¿Deseas pagar la cuota de tu Tarjeta Visa de $240.000 COP desde tu cuenta de Ahorros?");
+                      if (proceed) {
+                        handleExecuteTransfer(accounts[0].id, 240000, "Tarjeta Visa Bancolombia", "Pago Tarjeta de Crédito");
+                        alert("¡Gracias! Cuota de tarjeta Visa pagada exitosamente de forma simulada.");
+                      }
+                    }}
+                    className="bg-[#212224] hover:bg-[#28292c] transition-all rounded-2xl p-3 flex flex-col justify-between min-h-[102px] cursor-pointer text-left shadow-sm border border-zinc-800/25 active:scale-[0.97]"
+                  >
+                    <div className="text-zinc-100 pl-0.5">
+                      <svg className="w-[20px] h-[20px] text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                        <rect x="5" y="13" width="4" height="2" rx="0.5" fill="#FED201" stroke="#FED201" strokeWidth="0.5" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] leading-[1.2] font-sans font-normal text-zinc-300 pl-0.5">Pagar tarjetas y créditos</span>
+                  </button>
+
+                  {/* Button 4: Pagar facturas */}
+                  <button
+                    onClick={() => setActiveSubScreen("pay-bill")}
+                    className="bg-[#212224] hover:bg-[#28292c] transition-all rounded-2xl p-3 flex flex-col justify-between min-h-[102px] cursor-pointer text-left shadow-sm border border-zinc-800/25 active:scale-[0.97]"
+                  >
+                    <div className="text-zinc-100 pl-0.5">
+                      <svg className="w-[20px] h-[20px] text-zinc-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" />
+                        <line x1="8" y1="8" x2="16" y2="8" stroke="#FED201" strokeWidth="1.5" />
+                        <line x1="8" y1="12" x2="16" y2="12" />
+                        <line x1="8" y1="16" x2="14" y2="16" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] leading-[1.2] font-sans font-normal text-zinc-300 pl-0.5">Pagar facturas</span>
+                  </button>
+
+                </div>
+              </div>
+
+              {/* EXPLORA NUESTRAS CATEGORIAS SECTION */}
+              <div className="space-y-3.5 flex-1 shrink-0 z-10 relative" id="explore-categories-area">
+                <span className="text-zinc-300 font-medium text-[12.5px] font-sans block pl-1">Explora nuestras categorías</span>
+
+                <div className="flex gap-5.5 items-center pl-1 pb-4 scrollbar-none" id="categories-circle-track">
+                  
+                  {/* Category 1: Bolsillos (Lilac/Purple filled circle) */}
+                  <button 
+                    onClick={() => setActiveSubScreen("pockets")}
+                    className="flex flex-col items-center shrink-0 w-[55px] cursor-pointer"
+                  >
+                    <div className="w-[54px] h-[54px] bg-[#c7b4e9] rounded-full flex items-center justify-center text-zinc-950 shadow-md">
+                      <svg className="w-[25px] h-[25px] text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Target dart style nested ring */}
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] text-zinc-300 font-medium mt-1.5 block font-sans">Bolsillos</span>
+                  </button>
+
+                  {/* Category 2: Créditos (Emerald/Teal filled circle) */}
+                  <button 
+                    onClick={() => setActiveSubScreen("credit-calc")}
+                    className="flex flex-col items-center shrink-0 w-[55px] cursor-pointer"
+                  >
+                    <div className="w-[54px] h-[54px] bg-[#6ce2b9] rounded-full flex items-center justify-center text-zinc-950 shadow-md">
+                      <svg className="w-[25px] h-[25px] text-zinc-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Perfect small Colombian home logo representation */}
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <rect x="9" y="14" width="6" height="8" strokeWidth="2.5" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] text-zinc-300 font-medium mt-1.5 block font-sans">Créditos</span>
+                  </button>
+
+                  {/* Category 3: Seguros (Yellow filled circle with car symbol) */}
+                  <button 
+                    onClick={() => setActiveSubScreen("seguros")}
+                    className="flex flex-col items-center shrink-0 w-[55px] cursor-pointer"
+                  >
+                    <div className="w-[54px] h-[54px] bg-[#fde462] rounded-full flex items-center justify-center text-zinc-950 shadow-md">
+                      <svg className="w-[25px] h-[25px] text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        {/* Car and protective shield concept representation */}
+                        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                        <circle cx="7" cy="17" r="2" />
+                        <circle cx="17" cy="17" r="2" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] text-zinc-300 font-medium mt-1.5 block font-sans">Seguros</span>
+                  </button>
+
+                </div>
+
+                {/* VISUALLY PERFECT SCANNER HOVER OVERLAPPED ICON - YELLOW OUTER RING BADGE */}
+                <div className="absolute right-3.5 bottom-12 w-[60px] h-[60px] pointer-events-auto z-30">
+                  <button
+                    onClick={() => setActiveSubScreen("qr-scan")}
+                    className="w-full h-full bg-[#131314] rounded-full flex items-center justify-center select-none cursor-pointer border-[3.8px] border-[#FED201] shadow-2xl relative active:scale-95 transition-transform"
+                    title="Escanear Código QR"
+                    id="floating-qr-button"
+                  >
+                    {/* Interior QR grid container */}
+                    <svg className="w-[28px] h-[28px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7" />
+                      <rect x="14" y="3" width="7" height="7" />
+                      <rect x="14" y="14" width="7" height="7" />
+                      <rect x="3" y="14" width="7" height="7" />
+                      <path d="M7 7h.01 M17 7h.01 M17 17h.01 M7 17h.01" strokeWidth="3.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+
+          {/* OTHER TAB SCREEN STATES */}
+
+          {/* TAB 2: TRANSACCIONES HISTORIES */}
+          {activeTab === "transacciones" && activeSubScreen === "none" && (
+            <div className="flex-1 flex flex-col p-4 bg-[#1e1e21]" id="tab-transacciones-view">
+              <div className="pb-3 border-b border-zinc-800">
+                <h3 className="font-bold text-sm text-neutral-200">Historial de Transacciones</h3>
+                <p className="text-[10px] text-zinc-500">Consulta todos tus movimientos de fondos mensuales.</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pt-4">
+                <MovementsView
+                  movements={movements}
+                  onClose={() => setActiveTab("inicio")}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: EXPLORAR PORTFOLIO AND ARTICLES */}
+          {activeTab === "explorar" && activeSubScreen === "none" && (
+            <div className="flex-1 flex flex-col p-4 bg-[#1e1e21] space-y-4" id="tab-explorar-view">
+              <div className="pb-3 border-b border-zinc-800">
+                <h3 className="font-bold text-sm text-neutral-200">Educación Financiera</h3>
+                <p className="text-[10px] text-zinc-500">Mejora tus hábitos de ahorro y aprende de inversiones.</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3.5 pt-1">
+                <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[8px] bg-yellow-400/10 text-yellow-400 font-bold px-1.5 py-0.2 rounded uppercase">Estrategia</span>
+                    <span className="text-[9px] text-zinc-500">Lectura de 3 min</span>
+                  </div>
+                  <h4 className="font-bold text-xs text-neutral-200 pt-1">El secreto de la Regla 50/30/20</h4>
+                  <p className="text-[10px] text-zinc-400 leading-normal">Aprende a distribuir tus ingresos mensuales de forma balanceada: 50% necesidades básicas, 30% deseos personales, 20% ahorro e inversión.</p>
+                </div>
+
+                <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[8px] bg-purple-500/10 text-purple-400 font-bold px-1.5 py-0.2 rounded uppercase">Metas</span>
+                    <span className="text-[9px] text-zinc-500">Lectura de 4 min</span>
+                  </div>
+                  <h4 className="font-bold text-xs text-neutral-200 pt-1">¿Cómo crear un Bolsillo de Emergencia?</h4>
+                  <p className="text-[10px] text-zinc-400 leading-normal">Tener ahorrado lo equivalente a 3 o 6 meses de tus gastos fijos te dará tranquilidad absoluta ante imprevistos de salud o empleo.</p>
+                </div>
+
+                <div className="p-3.5 bg-yellow-400/10 border border-yellow-400/20 rounded-2xl flex items-start gap-2.5">
+                  <Award className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                  <div className="text-[10px] text-yellow-1050 space-y-1">
+                    <p className="font-bold text-yellow-200">¿Quieres un reto personalizado?</p>
+                    <p className="text-zinc-300 leading-relaxed">Pídele consejos a Tabby en la pestaña de Trámites. Ella analizará tus metas de ahorro y te dará pautas adaptadas a Colombia.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: TRÁMITES Y SOLICITUDES (AI CHATBOT!) */}
+          {activeTab === "tramites" && activeSubScreen === "none" && (
+            <div className="flex-1 flex flex-col bg-[#1e1e21]" id="tab-tramites-view">
+              <ChatAssistant
+                accounts={accounts}
+                onSimulateTransfer={(amt, dest) => {
+                  handleExecuteTransfer(accounts[0].id, amt, dest, "Asistente AI Tabby");
+                  setActiveTab("inicio");
+                }}
+                onClose={() => setActiveTab("inicio")}
+              />
+            </div>
+          )}
+
+          {/* TAB 5: AJUSTES APP */}
+          {activeTab === "ajustes" && activeSubScreen === "none" && (
+            <div className="flex-1 flex flex-col p-4 bg-[#1e1e21] space-y-4" id="tab-ajustes-view">
+              <div className="pb-3 border-b border-zinc-800">
+                <h3 className="font-bold text-sm text-neutral-200">Ajustes del Simulador</h3>
+                <p className="text-[10px] text-zinc-500">Configura los parámetros ficticios de la aplicación.</p>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {/* Developer / User settings */}
+                <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-3">
+                  <h4 className="font-bold text-xs text-neutral-200 flex items-center gap-1.5 pb-2 border-b border-zinc-800">
+                    <User className="w-4 h-4 text-yellow-400" /> Perfil Ficticio
+                  </h4>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-zinc-500 font-bold uppercase">Nombre del Cliente</label>
+                    <input
+                      type="text"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="w-full bg-zinc-950 text-xs px-2.5 py-1.5 rounded-lg border border-zinc-800 text-neutral-100 placeholder-zinc-700 focus:outline-none focus:border-yellow-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-2">
+                  <h4 className="font-bold text-xs text-neutral-200 flex items-center gap-1.5 pb-1.5 border-b border-zinc-800">
+                    <ShieldCheck className="w-4 h-4 text-yellow-400" /> Datos de red y API
+                  </h4>
+                  <div className="text-[10px] text-zinc-400 space-y-1">
+                    <p className="flex justify-between font-mono"><span>Servidor API:</span> <span className="text-emerald-400">En línea (3000)</span></p>
+                    <p className="flex justify-between font-mono"><span>Cliente Gemini:</span> <span className="text-yellow-400">@google/genai SDK</span></p>
+                    <p className="flex justify-between font-mono"><span>Entorno Local:</span> <span className="text-neutral-400">Espacio de Trabajo Seguro</span></p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-zinc-950 rounded-xl border border-dashed border-zinc-700 text-center text-[10px] text-zinc-500">
+                  Creado fielmente con amor para Alejandra Castro y el portal seguro de Bancolombia. 🇨🇴
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* 3. STICKY THE BOTTOM NAVIGATION RETICULE - ALWAYS VISIBLE */}
+          <div className="h-[58px] bg-[#1e1e20] flex items-center justify-around text-[10px] shrink-0 z-40 border-t border-zinc-800/20" id="phone-bottom-nav">
+            
+            {/* Nav 1: Inicio */}
+            <button
+              onClick={() => {
+                setActiveTab("inicio");
+                setActiveSubScreen("none"); // close overlays
+              }}
+              className={`flex-1 h-full flex flex-col items-center justify-center cursor-pointer transition-all ${
+                activeTab === "inicio"
+                  ? "bg-[#FED201] text-zinc-950 font-bold"
+                  : "text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              <svg className={`w-5 h-5 ${activeTab === "inicio" ? "text-zinc-950 stroke-[2.2]" : "text-zinc-300 stroke-[1.8]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <span className="text-[9.5px] mt-0.5 font-sans font-medium">Inicio</span>
+            </button>
+
+            {/* Nav 2: Transacciones */}
+            <button
+              onClick={() => {
+                setActiveTab("transacciones");
+                setActiveSubScreen("none");
+              }}
+              className={`flex-1 h-full flex flex-col items-center justify-center cursor-pointer transition-all ${
+                activeTab === "transacciones"
+                  ? "bg-[#FED201] text-zinc-950 font-bold"
+                  : "text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              <svg className={`w-5 h-5 ${activeTab === "transacciones" ? "text-zinc-950 stroke-[2.2]" : "text-zinc-300 stroke-[1.8]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+                <line x1="6" y1="15" x2="10" y2="15" />
+              </svg>
+              <span className="text-[9.5px] mt-0.5 font-sans font-medium">Transacciones</span>
+            </button>
+
+            {/* Nav 3: Explorar */}
+            <button
+              onClick={() => {
+                setActiveTab("explorar");
+                setActiveSubScreen("none");
+              }}
+              className={`flex-1 h-full flex flex-col items-center justify-center cursor-pointer transition-all ${
+                activeTab === "explorar"
+                  ? "bg-[#FED201] text-zinc-950 font-bold"
+                  : "text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              <svg 
+                className={`w-5 h-5 ${activeTab === "explorar" ? "text-zinc-950 stroke-[2.2]" : "text-zinc-300 stroke-[1.8]"}`} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span className="text-[9.5px] mt-0.5 font-sans font-medium">Explorar</span>
+            </button>
+
+            {/* Nav 4: Trámites (AI Chat!) */}
+            <button
+              onClick={() => {
+                setActiveTab("tramites");
+                setActiveSubScreen("none");
+              }}
+              className={`flex-1 h-full flex flex-col items-center justify-center cursor-pointer relative transition-all ${
+                activeTab === "tramites"
+                  ? "bg-[#FED201] text-zinc-950 font-bold"
+                  : "text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              <svg 
+                className={`w-5 h-5 ${activeTab === "tramites" ? "text-zinc-950 stroke-[2.2]" : "text-zinc-300 stroke-[1.8]"}`} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <span className="text-[8px] mt-0.5 leading-[1.05] font-sans font-medium text-center whitespace-nowrap">
+                Trámites y<br/>solicitudes
+              </span>
+            </button>
+
+            {/* Nav 5: Ajustes */}
+            <button
+              onClick={() => {
+                setActiveTab("ajustes");
+                setActiveSubScreen("none");
+              }}
+              className={`flex-1 h-full flex flex-col items-center justify-center cursor-pointer transition-all ${
+                activeTab === "ajustes"
+                  ? "bg-[#FED201] text-zinc-950 font-bold"
+                  : "text-[#9ca3af] hover:text-white"
+              }`}
+            >
+              <svg className={`w-5 h-5 ${activeTab === "ajustes" ? "text-zinc-950 stroke-[2.2]" : "text-zinc-200 stroke-[1.8]"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span className="text-[9.5px] mt-0.5 font-sans font-medium">Ajustes</span>
+            </button>
+
+          </div>
+        </PhoneContainer>
+      </div>
+
+    </div>
+  );
+}

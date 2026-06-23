@@ -508,30 +508,81 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── VERIFICATION RESULT BANNER ── */}
+      {currentUser?.verificationStatus === "approved" && currentUser?.status === "active" && (
+        <View style={{ backgroundColor: "#22C55E12", borderLeftWidth: 4, borderLeftColor: "#22C55E", marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Feather name="check-circle" size={16} color="#22C55E" />
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#22C55E", fontFamily: "Inter_700Bold" }}>Verificación aprobada</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.6)" : "#6B7280", fontFamily: "Inter_400Regular", lineHeight: 17 }}>
+            Tu identidad ha sido verificada exitosamente. Tu cuenta ha sido desbloqueada y tienes acceso completo.
+          </Text>
+        </View>
+      )}
+
       {/* ── RESTRICTION BANNER ── */}
       {(currentUser?.status === "suspended" || currentUser?.status === "blocked") && (() => {
         const isBlocked = currentUser.status === "blocked";
-        const color = isBlocked ? "#EF4444" : "#F59E0B";
+        const color = currentUser.verificationStatus === "failed" ? "#EF4444" : isBlocked ? "#EF4444" : "#F59E0B";
         const steps = currentUser.unblockSteps ?? [];
         const docs = currentUser.requiredDocuments ?? [];
         const completedCount = steps.filter((s) => s.completed).length;
+        const isPendingReview = currentUser.verificationStatus === "pending_review";
+        const isFailed = currentUser.verificationStatus === "failed";
+        const attempts = currentUser.verificationAttempts ?? 0;
         return (
           <View style={{ backgroundColor: color + "12", borderLeftWidth: 4, borderLeftColor: color, marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <Feather name={isBlocked ? "lock" : "alert-triangle"} size={16} color={color} />
+              <Feather name={isPendingReview ? "clock" : isFailed ? "x-circle" : isBlocked ? "lock" : "alert-triangle"} size={16} color={color} />
               <Text style={{ fontSize: 14, fontWeight: "700", color, fontFamily: "Inter_700Bold" }}>
-                {isBlocked ? "Cuenta bloqueada" : "Cuenta en revisión"}
+                {isPendingReview ? "Documentos en revisión" : isFailed ? "Verificación fallida" : isBlocked ? "Cuenta bloqueada" : "Cuenta en revisión"}
               </Text>
+              {isFailed && attempts > 0 && (
+                <View style={{ marginLeft: "auto" as any, backgroundColor: color + "22", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 10, color, fontFamily: "Inter_700Bold" }}>Intento {attempts}/5</Text>
+                </View>
+              )}
             </View>
-            <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.6)" : "#6B7280", fontFamily: "Inter_400Regular", lineHeight: 17, marginBottom: currentUser.suspensionReason ? 6 : 0 }}>
-              Puedes consultar tu saldo e información. Los movimientos de dinero están temporalmente restringidos.
-            </Text>
-            {currentUser.suspensionReason ? (
-              <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.45)" : "#9CA3AF", fontFamily: "Inter_400Regular", marginBottom: 4 }}>
-                Motivo: {currentUser.suspensionReason}
+
+            {isPendingReview ? (
+              <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.6)" : "#6B7280", fontFamily: "Inter_400Regular", lineHeight: 17, marginBottom: 6 }}>
+                Tus documentos han sido enviados y están siendo revisados por el equipo de Bancolombia. Recibirás una respuesta en 1–3 días hábiles.
               </Text>
-            ) : null}
-            {steps.length > 0 && (
+            ) : isFailed ? (
+              <>
+                {currentUser.verificationFailedReason ? (
+                  <View style={{ backgroundColor: color + "12", borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 12, color, fontFamily: "Inter_700Bold", marginBottom: 3 }}>Motivo del rechazo:</Text>
+                    <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.7)" : "#4B5563", fontFamily: "Inter_400Regular", lineHeight: 17 }}>
+                      {currentUser.verificationFailedReason}
+                    </Text>
+                  </View>
+                ) : null}
+                {attempts < 5 ? (
+                  <Text style={{ fontSize: 12, color: "#FDDA24", fontFamily: "Inter_500Medium", marginBottom: 6 }}>
+                    Puedes volver a enviar tu documentación ({5 - attempts} intento{5 - attempts !== 1 ? "s" : ""} restante{5 - attempts !== 1 ? "s" : ""}).
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 12, color, fontFamily: "Inter_500Medium", marginBottom: 6 }}>
+                    Has alcanzado el límite de 5 intentos. Contacta a soporte.
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.6)" : "#6B7280", fontFamily: "Inter_400Regular", lineHeight: 17, marginBottom: currentUser.suspensionReason ? 6 : 0 }}>
+                  Puedes consultar tu saldo e información. Los movimientos de dinero están temporalmente restringidos.
+                </Text>
+                {currentUser.suspensionReason ? (
+                  <Text style={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.45)" : "#9CA3AF", fontFamily: "Inter_400Regular", marginBottom: 4 }}>
+                    Motivo: {currentUser.suspensionReason}
+                  </Text>
+                ) : null}
+              </>
+            )}
+
+            {!isPendingReview && steps.length > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <Feather name="list" size={11} color={color} />
                 <Text style={{ fontSize: 12, color, fontFamily: "Inter_500Medium" }}>
@@ -539,7 +590,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
-            {docs.length > 0 && steps.length === 0 && (
+            {!isPendingReview && docs.length > 0 && steps.length === 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <Feather name="file-text" size={11} color={color} />
                 <Text style={{ fontSize: 12, color, fontFamily: "Inter_500Medium" }}>
@@ -547,14 +598,18 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
-            <TouchableOpacity
-              style={{ backgroundColor: "#22C55E", borderRadius: 10, paddingVertical: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 12 }}
-              onPress={() => setShowUnblock(true)}
-              activeOpacity={0.82}
-            >
-              <Feather name="unlock" size={15} color="#FFFFFF" />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" }}>Adelantar proceso de desbloqueo</Text>
-            </TouchableOpacity>
+            {(!isPendingReview && (attempts < 5 || !isFailed)) && (
+              <TouchableOpacity
+                style={{ backgroundColor: isFailed ? "#FDDA24" : "#22C55E", borderRadius: 10, paddingVertical: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 12 }}
+                onPress={() => setShowUnblock(true)}
+                activeOpacity={0.82}
+              >
+                <Feather name={isFailed ? "refresh-cw" : "unlock"} size={15} color={isFailed ? "#1C1C1E" : "#FFFFFF"} />
+                <Text style={{ fontSize: 13, fontWeight: "700", color: isFailed ? "#1C1C1E" : "#FFFFFF", fontFamily: "Inter_700Bold" }}>
+                  {isFailed ? "Volver a enviar documentación" : "Adelantar proceso de desbloqueo"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
       })()}

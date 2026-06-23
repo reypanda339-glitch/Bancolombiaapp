@@ -26,6 +26,8 @@ export type SuspensionStep = {
   completedAt?: string;
   submittedValue?: string;
   submissionType?: SubmissionType;
+  submittedImageBase64?: string;
+  submittedImageMime?: string;
 };
 
 export type RegisteredUser = {
@@ -55,6 +57,9 @@ export type RegisteredUser = {
   suspensionDate?: string;
   requiredDocuments?: string[];
   unblockSteps?: SuspensionStep[];
+  verificationStatus?: "pending_review" | "approved" | "failed";
+  verificationFailedReason?: string;
+  verificationAttempts?: number;
 };
 
 export type { DocType };
@@ -176,7 +181,9 @@ type AppContextType = {
   addAuditLog: (action: string, details: string, targetUserId?: string) => Promise<void>;
   getLoginEvents: () => Promise<LoginEvent[]>;
   requestLocationPermission: () => Promise<boolean>;
-  submitUnblockStep: (stepId: string, submissionType: SubmissionType, submittedValue?: string) => Promise<void>;
+  submitUnblockStep: (stepId: string, submissionType: SubmissionType, submittedValue?: string, imageBase64?: string, imageMime?: string) => Promise<void>;
+  approveVerification: (userId: string) => Promise<void>;
+  rejectVerification: (userId: string, reason: string) => Promise<void>;
   requestPinChange: (newPin: string) => Promise<void>;
   approvePinChange: (requestId: string) => Promise<void>;
   rejectPinChange: (requestId: string, reason?: string) => Promise<void>;
@@ -744,21 +751,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return apiFetch("/pwa-events");
   }, []);
 
-  const submitUnblockStep = useCallback(async (stepId: string, submissionType: SubmissionType, submittedValue?: string) => {
+  const submitUnblockStep = useCallback(async (stepId: string, submissionType: SubmissionType, submittedValue?: string, imageBase64?: string, imageMime?: string) => {
     if (!currentUser) return;
     const updatedSteps = (currentUser.unblockSteps ?? []).map((s) =>
       s.id === stepId
-        ? { ...s, completed: true, completedAt: new Date().toISOString(), submissionType, submittedValue: submittedValue ?? "" }
+        ? {
+            ...s,
+            completed: true,
+            completedAt: new Date().toISOString(),
+            submissionType,
+            submittedValue: submittedValue ?? "",
+            ...(imageBase64 ? { submittedImageBase64: imageBase64, submittedImageMime: imageMime ?? "image/jpeg" } : {}),
+          }
         : s
     );
+    const allDone = updatedSteps.every((s) => s.completed);
     const updated: RegisteredUser = await apiFetch(`/users/${currentUser.id}`, {
       method: "PUT",
-      body: JSON.stringify({ unblockSteps: updatedSteps }),
+      body: JSON.stringify({
+        unblockSteps: updatedSteps,
+        ...(allDone ? { verificationStatus: "pending_review" } : {}),
+      }),
     });
     setCurrentUser(updated);
     await AsyncStorage.setItem("currentUser", JSON.stringify(updated));
     const step = updatedSteps.find((s) => s.id === stepId);
-    await recordAuditLog(currentUser.id, "SUBMIT_UNBLOCK_STEP", `Paso enviado: "${step?.label}" · Tipo: ${submissionType} · Valor: ${submittedValue ?? "—"}`, currentUser.id);
+    await recordAuditLog(currentUser.id, "SUBMIT_UNBLOCK_STEP", `Paso enviado: "${step?.label}" · Tipo: ${submissionType} · Valor: ${submittedValue ?? "—"}${allDone ? " · TODOS LOS PASOS COMPLETADOS — En revisión" : ""}`, currentUser.id);
+  }, [currentUser]);
+
+  const approveVerification = useCallback(async (userId: string) => {
+    const updated: RegisteredUser = await apiFetch(`/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        status: "active",
+        verificationStatus: "approved",
+        verificationFailedReason: null,
+        suspensionReason: null,
+        unblockSteps: [],
+        requiredDocuments: [],
+      }),
+    });
+    if (currentUser?.id === userId) {
+      setCurrentUser(updated);
+      await AsyncStorage.setItem("currentUser", JSON.stringify(updated));
+    }
+    await recordAuditLog(currentUser?.id ?? "admin", "VERIFICATION_APPROVED", `Verificación aprobada. Usuario ${userId} desbloqueado.`, userId);
+  }, [currentUser]);
+
+  const rejectVerification = useCallback(async (userId: string, reason: string) => {
+    const users: RegisteredUser[] = await apiFetch("/users");
+    const target = users.find((u) => u.id === userId);
+    const attempts = (target?.verificationAttempts ?? 0) + 1;
+    const updated: RegisteredUser = await apiFetch(`/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        verificationStatus: "failed",
+        verificationFailedReason: reason,
+        verificationAttempts: attempts,
+        unblockSteps: (target?.unblockSteps ?? []).map((s) => ({
+          ...s,
+          completed: false,
+          completedAt: undefined,
+          submittedValue: undefined,
+          submissionType: undefined,
+          submittedImageBase64: undefined,
+          submittedImageMime: undefined,
+        })),
+      }),
+    });
+    if (currentUser?.id === userId) {
+      setCurrentUser(updated);
+      await AsyncStorage.setItem("currentUser", JSON.stringify(updated));
+    }
+    await recordAuditLog(currentUser?.id ?? "admin", "VERIFICATION_REJECTED", `Verificación rechazada. Usuario ${userId}. Motivo: ${reason}. Intento #${attempts}.`, userId);
   }, [currentUser]);
 
   const displayName = currentUser?.firstName ?? "";
@@ -800,6 +865,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supportPhone,
         setSupportPhone,
         submitUnblockStep,
+        approveVerification,
+        rejectVerification,
         requestPinChange,
         approvePinChange,
         rejectPinChange,

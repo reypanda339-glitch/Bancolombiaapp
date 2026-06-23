@@ -75,10 +75,17 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="apelacion"
+        options={{
+          title: "Apelación",
+          tabBarIcon: ({ focused }) => <TabIcon name="shield" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="auditoria"
         options={{
           title: "Auditoría",
-          tabBarIcon: ({ focused }) => <TabIcon name="shield" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="list" focused={focused} />,
         }}
       />
       <Tabs.Screen

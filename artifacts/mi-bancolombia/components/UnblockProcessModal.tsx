@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -79,7 +80,7 @@ function UniversalStepPanel({
   currentUser,
 }: {
   step: SuspensionStep;
-  onSubmit: (t: SubmissionType, v?: string) => Promise<void>;
+  onSubmit: (t: SubmissionType, v?: string, imageBase64?: string, imageMime?: string) => Promise<void>;
   onClose: () => void;
   isDark: boolean;
   currentUser: any;
@@ -90,6 +91,9 @@ function UniversalStepPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState("");
   const [scanResult, setScanResult] = useState<string | null>(null);
+  const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
+  const [capturedBase64, setCapturedBase64] = useState<string | null>(null);
+  const [capturedMime, setCapturedMime] = useState<string>("image/jpeg");
 
   /* manual form fields */
   const [docNumber, setDocNumber] = useState("");
@@ -103,11 +107,11 @@ function UniversalStepPanel({
 
   const isIdentity = step.type === "identity_document" || step.type === "identity_verification";
 
-  const doSubmit = async (type: SubmissionType, value?: string) => {
+  const doSubmit = async (type: SubmissionType, value?: string, imageBase64?: string, imageMime?: string) => {
     setSubmitting(true);
     setError("");
     try {
-      await onSubmit(type, value);
+      await onSubmit(type, value, imageBase64, imageMime);
       onClose();
     } catch {
       setError("Ocurrió un error. Inténtalo de nuevo.");
@@ -133,26 +137,54 @@ function UniversalStepPanel({
     return true;
   };
 
+  /* ── Convert image URI to base64 ── */
+  const imageToBase64 = async (uri: string, base64FromPicker?: string): Promise<{ base64: string; mime: string }> => {
+    if (base64FromPicker) {
+      return { base64: base64FromPicker, mime: "image/jpeg" };
+    }
+    if (Platform.OS === "web") {
+      try {
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        const mime = blob.type || "image/jpeg";
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            const base64 = dataUrl.split(",")[1] ?? "";
+            resolve({ base64, mime });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return { base64: "", mime: "image/jpeg" };
+      }
+    }
+    return { base64: "", mime: "image/jpeg" };
+  };
+
   /* ── Process a picked image: detect barcode or extract text ── */
-  const processPickedImage = async (uri: string) => {
+  const processPickedImage = async (uri: string, base64FromPicker?: string) => {
+    setCapturedImageUri(uri);
+    const { base64, mime } = await imageToBase64(uri, base64FromPicker);
+    setCapturedBase64(base64 || null);
+    setCapturedMime(mime);
+
     if (!isIdentity) {
-      // Try to detect barcode from image
       setScanning(true);
       const detected = await detectBarcodeFromImageUri(uri);
       setScanning(false);
       if (detected) {
-        setScanResult(`Código detectado: ${detected}`);
+        setScanResult(`✓ Código detectado: ${detected}`);
         setRadicado(detected);
-        setActiveTab("manual");
       } else {
         setScanResult("Imagen cargada. Verifica el número de radicado o ingrésalo manualmente.");
-        // Prefill with assigned radicado if available
         if (step.radicadoNumber) setRadicado(step.radicadoNumber);
-        setActiveTab("manual");
       }
+      setActiveTab("manual");
     } else {
-      // Identity: prefill with user data
-      setScanResult("Documento fotografiado. Verifica los datos o ingrésalos manualmente.");
+      setScanResult("Documento fotografiado. Verifica los datos o confírmalos.");
       setDocNumber(currentUser?.documentNumber ?? "");
       setFullName(`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim());
       setActiveTab("manual");
@@ -168,10 +200,11 @@ function UniversalStepPanel({
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.85,
+        quality: 0.8,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
-        await processPickedImage(result.assets[0].uri);
+        await processPickedImage(result.assets[0].uri, result.assets[0].base64 ?? undefined);
       }
     } catch (err) {
       setError("No se pudo abrir la cámara. Inténtalo de nuevo.");
@@ -190,10 +223,11 @@ function UniversalStepPanel({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.85,
+        quality: 0.8,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
-        await processPickedImage(result.assets[0].uri);
+        await processPickedImage(result.assets[0].uri, result.assets[0].base64 ?? undefined);
       }
     } catch {
       setError("No se pudo acceder a la galería.");
@@ -204,8 +238,8 @@ function UniversalStepPanel({
   const handleScan = async () => {
     setError("");
     setScanResult(null);
-    // On web: use camera + BarcodeDetector
-    // On native: use camera and try to detect
+    setCapturedImageUri(null);
+    setCapturedBase64(null);
     const ok = await requestPermissions();
     if (!ok) return;
     setScanning(true);
@@ -214,9 +248,16 @@ function UniversalStepPanel({
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.95,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
-        const detected = await detectBarcodeFromImageUri(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        setCapturedImageUri(uri);
+        const pickerBase64 = result.assets[0].base64 ?? undefined;
+        const { base64, mime } = await imageToBase64(uri, pickerBase64);
+        setCapturedBase64(base64 || null);
+        setCapturedMime(mime);
+        const detected = await detectBarcodeFromImageUri(uri);
         setScanning(false);
         if (detected) {
           setScanResult(`✓ Código detectado: ${detected}`);
@@ -228,9 +269,8 @@ function UniversalStepPanel({
           }
           setActiveTab("manual");
         } else {
-          // Could not auto-detect, ask user to enter manually
           setScanResult(
-            "No se detectó automáticamente el código. Ingresa el número manualmente o intenta con mejor iluminación."
+            "Imagen capturada. No se detectó código automáticamente — ingresa el número manualmente."
           );
           if (step.radicadoNumber && !isIdentity) setRadicado(step.radicadoNumber);
           setActiveTab("manual");
@@ -282,10 +322,10 @@ function UniversalStepPanel({
   const handleManualConfirm = async () => {
     if (isIdentity) {
       if (!validateIdentity()) return;
-      await doSubmit("photo", `dni_${docNumber}_${fullName}`);
+      await doSubmit("photo", `dni_${docNumber}_${fullName}`, capturedBase64 ?? undefined, capturedMime);
     } else {
       if (!validateRadicado()) return;
-      await doSubmit("radicado", radicado.trim());
+      await doSubmit("radicado", radicado.trim(), capturedBase64 ?? undefined, capturedMime);
     }
   };
 
@@ -326,6 +366,27 @@ function UniversalStepPanel({
         <View style={{ flexDirection: "row", gap: 8, padding: 10, borderRadius: 10, backgroundColor: GREEN + "15" }}>
           <Feather name="check-circle" size={14} color={GREEN} />
           <Text style={{ fontSize: 11, color: GREEN, fontFamily: "Inter_400Regular", flex: 1 }}>{scanResult}</Text>
+        </View>
+      )}
+
+      {/* Captured image preview */}
+      {capturedImageUri && (
+        <View style={{ borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: GREEN + "60" }}>
+          <Image
+            source={{ uri: capturedImageUri }}
+            style={{ width: "100%", height: 140 }}
+            resizeMode="cover"
+          />
+          <View style={{ position: "absolute", bottom: 6, right: 6, backgroundColor: "#00000080", borderRadius: 6, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4 }}>
+            <Feather name="check" size={11} color={GREEN} />
+            <Text style={{ fontSize: 10, color: GREEN, fontFamily: "Inter_600SemiBold" }}>Imagen capturada</Text>
+          </View>
+          <TouchableOpacity
+            style={{ position: "absolute", top: 6, right: 6, backgroundColor: "#00000080", borderRadius: 16, width: 28, height: 28, alignItems: "center", justifyContent: "center" }}
+            onPress={() => { setCapturedImageUri(null); setCapturedBase64(null); setScanResult(null); }}
+          >
+            <Feather name="x" size={14} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -518,8 +579,8 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
   const completedCount = steps.filter((s) => s.completed).length;
   const allDone        = steps.length > 0 && completedCount === steps.length;
 
-  const handleSubmitStep = async (stepId: string, submissionType: SubmissionType, value?: string) => {
-    await submitUnblockStep(stepId, submissionType, value);
+  const handleSubmitStep = async (stepId: string, submissionType: SubmissionType, value?: string, imageBase64?: string, imageMime?: string) => {
+    await submitUnblockStep(stepId, submissionType, value, imageBase64, imageMime);
     setActiveStepId(null);
   };
 
@@ -551,7 +612,59 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+            {/* Verification status banners */}
+            {currentUser?.verificationStatus === "approved" && (
+              <View style={{ marginHorizontal: 20, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: GREEN + "15", borderWidth: 1, borderColor: GREEN + "40", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: GREEN + "22", alignItems: "center", justifyContent: "center" }}>
+                  <Feather name="check-circle" size={20} color={GREEN} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: GREEN, fontFamily: "Inter_700Bold" }}>Verificación aprobada</Text>
+                  <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2 }}>Tu identidad ha sido verificada exitosamente. Tu cuenta ha sido desbloqueada.</Text>
+                </View>
+              </View>
+            )}
+            {currentUser?.verificationStatus === "failed" && (
+              <View style={{ marginHorizontal: 20, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: RED + "15", borderWidth: 1, borderColor: RED + "40" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <Feather name="x-circle" size={18} color={RED} />
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: RED, fontFamily: "Inter_700Bold" }}>Verificación fallida</Text>
+                  {(currentUser.verificationAttempts ?? 0) > 0 && (
+                    <View style={{ marginLeft: "auto", backgroundColor: RED + "22", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }}>
+                      <Text style={{ fontSize: 10, color: RED, fontFamily: "Inter_700Bold" }}>Intento {currentUser.verificationAttempts}/5</Text>
+                    </View>
+                  )}
+                </View>
+                {currentUser.verificationFailedReason && (
+                  <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 8 }}>
+                    <Text style={{ fontWeight: "700", color: text }}>Motivo: </Text>{currentUser.verificationFailedReason}
+                  </Text>
+                )}
+                {(currentUser.verificationAttempts ?? 0) < 5 ? (
+                  <Text style={{ fontSize: 12, color: YELLOW, fontFamily: "Inter_500Medium" }}>
+                    Puedes volver a enviar tu documentación. Por favor corrige los documentos indicados y vuelve a intentarlo.
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 12, color: RED, fontFamily: "Inter_500Medium" }}>
+                    Has alcanzado el límite de intentos (5). Contacta a soporte para más ayuda.
+                  </Text>
+                )}
+              </View>
+            )}
+            {currentUser?.verificationStatus === "pending_review" && (
+              <View style={{ marginHorizontal: 20, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: BLUE + "12", borderWidth: 1, borderColor: BLUE + "30", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: BLUE + "22", alignItems: "center", justifyContent: "center" }}>
+                  <Feather name="clock" size={18} color={BLUE} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: BLUE, fontFamily: "Inter_700Bold" }}>En revisión por el equipo</Text>
+                  <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 17 }}>Todos tus documentos han sido enviados. El equipo de Bancolombia revisará tu caso en 1–3 días hábiles.</Text>
+                </View>
+              </View>
+            )}
+
             {/* Status banner */}
+            {!currentUser?.verificationStatus && (
             <View style={{ marginHorizontal: 20, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: accentColor + "12", borderWidth: 1, borderColor: accentColor + "30" }}>
               {currentUser?.suspensionReason && (
                 <Text style={{ fontSize: 13, color: accentColor, fontWeight: "700", fontFamily: "Inter_700Bold", marginBottom: 4 }}>
@@ -564,6 +677,7 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
                   : "Tu cuenta está en revisión. Completa los pasos a continuación para acelerar el proceso de habilitación."}
               </Text>
             </View>
+            )}
 
             {/* Required docs (no steps) */}
             {docs.length > 0 && steps.length === 0 && (
@@ -682,7 +796,7 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
                             <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: border }}>
                               <UniversalStepPanel
                                 step={step}
-                                onSubmit={(t, v) => handleSubmitStep(step.id, t, v)}
+                                onSubmit={(t, v, img64, imgMime) => handleSubmitStep(step.id, t, v, img64, imgMime)}
                                 onClose={() => setActiveStepId(null)}
                                 isDark={isDark}
                                 currentUser={currentUser}

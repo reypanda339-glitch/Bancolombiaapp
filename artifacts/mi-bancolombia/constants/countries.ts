@@ -1,15 +1,48 @@
-export type DocType = "CC" | "CE" | "DNI" | "CPF" | "DL" | "PA";
+export type DocType =
+  | "CC"   // Cédula de Ciudadanía (Colombia)
+  | "CE"   // Cédula de Extranjería (Colombia)
+  | "TI"   // Tarjeta de Identidad (Colombia)
+  | "PA"   // Pasaporte / Passport
+  | "DNI"  // DNI (España, Argentina, Perú)
+  | "NIE"  // Número de Identidad de Extranjero (España)
+  | "NIF"  // Número de Identificación Fiscal (España)
+  | "DL"   // Driver License (EE.UU., Canadá)
+  | "SSN"  // Social Security Number (EE.UU.)
+  | "GC"   // Green Card / Permanent Resident (EE.UU.)
+  | "CURP" // Clave Única de Registro de Población (México)
+  | "INE"  // INE / IFE (México)
+  | "CPF"  // CPF (Brasil)
+  | "RG"   // Registro Geral (Brasil)
+  | "CI"   // Cédula de Identidad (varios países LATAM)
+  | "RUT"; // RUT (Chile)
 
 export const DOC_TYPE_LABELS: Record<DocType, string> = {
-  CC: "Cédula de Ciudadanía",
-  CE: "Cédula de Extranjería",
-  DNI: "DNI",
-  CPF: "CPF",
-  DL: "Driver Licence",
-  PA: "Passport / Pasaporte",
+  CC:   "Cédula de Ciudadanía (Colombia)",
+  CE:   "Cédula de Extranjería (Colombia)",
+  TI:   "Tarjeta de Identidad (Colombia)",
+  PA:   "Pasaporte / Passport",
+  DNI:  "DNI (España / Argentina / Perú)",
+  NIE:  "NIE — Extranjero en España",
+  NIF:  "NIF — Identificación Fiscal (España)",
+  DL:   "Driver License (EE.UU. / Canadá)",
+  SSN:  "Social Security Number (EE.UU.)",
+  GC:   "Green Card / Permanent Resident (EE.UU.)",
+  CURP: "CURP (México)",
+  INE:  "INE / IFE (México)",
+  CPF:  "CPF (Brasil)",
+  RG:   "RG — Registro Geral (Brasil)",
+  CI:   "Cédula de Identidad (LATAM)",
+  RUT:  "RUT (Chile)",
 };
 
-export const ALL_DOC_TYPES: DocType[] = ["CC", "CE", "DNI", "CPF", "DL", "PA"];
+export const ALL_DOC_TYPES: DocType[] = [
+  "CC", "CE", "TI", "PA",
+  "DNI", "NIE", "NIF",
+  "DL", "SSN", "GC",
+  "CURP", "INE",
+  "CPF", "RG",
+  "CI", "RUT",
+];
 
 export type Country = {
   code: string;
@@ -23,28 +56,28 @@ export type Country = {
 };
 
 export const COUNTRIES: Country[] = [
-  { code: "CO", name: "Colombia",         flag: "🇨🇴", currency: "Peso colombiano",    currencySymbol: "$",   currencyCode: "COP", docTypes: ["CC","CE","PA"],    phoneCode: "+57" },
-  { code: "US", name: "Estados Unidos",   flag: "🇺🇸", currency: "Dólar estadounidense",currencySymbol: "US$", currencyCode: "USD", docTypes: ["DL","PA"],         phoneCode: "+1"  },
-  { code: "BR", name: "Brasil",           flag: "🇧🇷", currency: "Real brasileño",      currencySymbol: "R$",  currencyCode: "BRL", docTypes: ["CPF","PA"],        phoneCode: "+55" },
-  { code: "ES", name: "España",           flag: "🇪🇸", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],        phoneCode: "+34" },
-  { code: "MX", name: "México",           flag: "🇲🇽", currency: "Peso mexicano",       currencySymbol: "$",   currencyCode: "MXN", docTypes: ["CC","PA"],         phoneCode: "+52" },
-  { code: "AR", name: "Argentina",        flag: "🇦🇷", currency: "Peso argentino",      currencySymbol: "$",   currencyCode: "ARS", docTypes: ["DNI","PA"],        phoneCode: "+54" },
-  { code: "VE", name: "Venezuela",        flag: "🇻🇪", currency: "Bolívar venezolano",  currencySymbol: "Bs.", currencyCode: "VES", docTypes: ["CC","CE","PA"],    phoneCode: "+58" },
-  { code: "CL", name: "Chile",            flag: "🇨🇱", currency: "Peso chileno",        currencySymbol: "$",   currencyCode: "CLP", docTypes: ["CC","PA"],         phoneCode: "+56" },
-  { code: "PE", name: "Perú",             flag: "🇵🇪", currency: "Sol peruano",         currencySymbol: "S/",  currencyCode: "PEN", docTypes: ["DNI","CE","PA"],  phoneCode: "+51" },
-  { code: "EC", name: "Ecuador",          flag: "🇪🇨", currency: "Dólar estadounidense",currencySymbol: "US$", currencyCode: "USD", docTypes: ["CC","PA"],         phoneCode: "+593"},
-  { code: "GB", name: "Reino Unido",      flag: "🇬🇧", currency: "Libra esterlina",     currencySymbol: "£",   currencyCode: "GBP", docTypes: ["DL","PA"],         phoneCode: "+44" },
-  { code: "DE", name: "Alemania",         flag: "🇩🇪", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],        phoneCode: "+49" },
-  { code: "FR", name: "Francia",          flag: "🇫🇷", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],        phoneCode: "+33" },
-  { code: "IT", name: "Italia",           flag: "🇮🇹", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],        phoneCode: "+39" },
-  { code: "CA", name: "Canadá",           flag: "🇨🇦", currency: "Dólar canadiense",    currencySymbol: "CA$", currencyCode: "CAD", docTypes: ["DL","PA"],         phoneCode: "+1"  },
-  { code: "PT", name: "Portugal",         flag: "🇵🇹", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],        phoneCode: "+351"},
-  { code: "UY", name: "Uruguay",          flag: "🇺🇾", currency: "Peso uruguayo",       currencySymbol: "$",   currencyCode: "UYU", docTypes: ["CC","PA"],         phoneCode: "+598"},
-  { code: "BO", name: "Bolivia",          flag: "🇧🇴", currency: "Boliviano",           currencySymbol: "Bs.", currencyCode: "BOB", docTypes: ["CC","PA"],         phoneCode: "+591"},
-  { code: "PY", name: "Paraguay",         flag: "🇵🇾", currency: "Guaraní",             currencySymbol: "₲",   currencyCode: "PYG", docTypes: ["CC","PA"],         phoneCode: "+595"},
-  { code: "PA", name: "Panamá",           flag: "🇵🇦", currency: "Balboa / USD",        currencySymbol: "B/.", currencyCode: "PAB", docTypes: ["CC","PA"],         phoneCode: "+507"},
-  { code: "CR", name: "Costa Rica",       flag: "🇨🇷", currency: "Colón costarricense", currencySymbol: "₡",   currencyCode: "CRC", docTypes: ["CC","PA"],         phoneCode: "+506"},
-  { code: "DO", name: "Rep. Dominicana",  flag: "🇩🇴", currency: "Peso dominicano",     currencySymbol: "RD$", currencyCode: "DOP", docTypes: ["CC","CE","PA"],   phoneCode: "+1"  },
+  { code: "CO", name: "Colombia",         flag: "🇨🇴", currency: "Peso colombiano",    currencySymbol: "$",   currencyCode: "COP", docTypes: ["CC","CE","TI","PA"],          phoneCode: "+57" },
+  { code: "US", name: "Estados Unidos",   flag: "🇺🇸", currency: "Dólar estadounidense",currencySymbol: "US$", currencyCode: "USD", docTypes: ["DL","SSN","GC","PA"],         phoneCode: "+1"  },
+  { code: "BR", name: "Brasil",           flag: "🇧🇷", currency: "Real brasileño",      currencySymbol: "R$",  currencyCode: "BRL", docTypes: ["CPF","RG","PA"],              phoneCode: "+55" },
+  { code: "ES", name: "España",           flag: "🇪🇸", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","NIE","NIF","PA"],       phoneCode: "+34" },
+  { code: "MX", name: "México",           flag: "🇲🇽", currency: "Peso mexicano",       currencySymbol: "$",   currencyCode: "MXN", docTypes: ["CURP","INE","PA"],            phoneCode: "+52" },
+  { code: "AR", name: "Argentina",        flag: "🇦🇷", currency: "Peso argentino",      currencySymbol: "$",   currencyCode: "ARS", docTypes: ["DNI","PA"],                   phoneCode: "+54" },
+  { code: "VE", name: "Venezuela",        flag: "🇻🇪", currency: "Bolívar venezolano",  currencySymbol: "Bs.", currencyCode: "VES", docTypes: ["CC","CE","PA"],               phoneCode: "+58" },
+  { code: "CL", name: "Chile",            flag: "🇨🇱", currency: "Peso chileno",        currencySymbol: "$",   currencyCode: "CLP", docTypes: ["RUT","CI","PA"],              phoneCode: "+56" },
+  { code: "PE", name: "Perú",             flag: "🇵🇪", currency: "Sol peruano",         currencySymbol: "S/",  currencyCode: "PEN", docTypes: ["DNI","CE","PA"],              phoneCode: "+51" },
+  { code: "EC", name: "Ecuador",          flag: "🇪🇨", currency: "Dólar estadounidense",currencySymbol: "US$", currencyCode: "USD", docTypes: ["CC","PA"],                    phoneCode: "+593"},
+  { code: "GB", name: "Reino Unido",      flag: "🇬🇧", currency: "Libra esterlina",     currencySymbol: "£",   currencyCode: "GBP", docTypes: ["DL","PA"],                    phoneCode: "+44" },
+  { code: "DE", name: "Alemania",         flag: "🇩🇪", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],                   phoneCode: "+49" },
+  { code: "FR", name: "Francia",          flag: "🇫🇷", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],                   phoneCode: "+33" },
+  { code: "IT", name: "Italia",           flag: "🇮🇹", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","PA"],                   phoneCode: "+39" },
+  { code: "CA", name: "Canadá",           flag: "🇨🇦", currency: "Dólar canadiense",    currencySymbol: "CA$", currencyCode: "CAD", docTypes: ["DL","PA"],                    phoneCode: "+1"  },
+  { code: "PT", name: "Portugal",         flag: "🇵🇹", currency: "Euro",                currencySymbol: "€",   currencyCode: "EUR", docTypes: ["DNI","NIF","PA"],             phoneCode: "+351"},
+  { code: "UY", name: "Uruguay",          flag: "🇺🇾", currency: "Peso uruguayo",       currencySymbol: "$",   currencyCode: "UYU", docTypes: ["CI","PA"],                    phoneCode: "+598"},
+  { code: "BO", name: "Bolivia",          flag: "🇧🇴", currency: "Boliviano",           currencySymbol: "Bs.", currencyCode: "BOB", docTypes: ["CI","PA"],                    phoneCode: "+591"},
+  { code: "PY", name: "Paraguay",         flag: "🇵🇾", currency: "Guaraní",             currencySymbol: "₲",   currencyCode: "PYG", docTypes: ["CI","PA"],                    phoneCode: "+595"},
+  { code: "PA", name: "Panamá",           flag: "🇵🇦", currency: "Balboa / USD",        currencySymbol: "B/.", currencyCode: "PAB", docTypes: ["CC","PA"],                    phoneCode: "+507"},
+  { code: "CR", name: "Costa Rica",       flag: "🇨🇷", currency: "Colón costarricense", currencySymbol: "₡",   currencyCode: "CRC", docTypes: ["CI","PA"],                    phoneCode: "+506"},
+  { code: "DO", name: "Rep. Dominicana",  flag: "🇩🇴", currency: "Peso dominicano",     currencySymbol: "RD$", currencyCode: "DOP", docTypes: ["CC","CE","PA"],               phoneCode: "+1"  },
 ];
 
 export function getCountryByCode(code: string): Country | undefined {

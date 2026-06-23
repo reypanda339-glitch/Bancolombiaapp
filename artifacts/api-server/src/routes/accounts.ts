@@ -18,7 +18,8 @@ router.post("/accounts", async (req, res): Promise<void> => {
     res.status(400).json({ error: "id and userId are required" });
     return;
   }
-  const [account] = await db.insert(accountsTable).values(data).returning();
+  const { createdAt: _ca, ...insertData } = data;
+  const [account] = await db.insert(accountsTable).values(insertData).returning();
   res.status(201).json(account);
 });
 

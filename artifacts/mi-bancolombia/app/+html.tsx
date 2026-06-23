@@ -86,6 +86,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#0F0F0F" />
         <meta name="format-detection" content="telephone=no" />
+        <link rel="icon" type="image/png" href="/assets/assets/images/pwa-icon.png" />
+        <link rel="apple-touch-icon" href="/assets/assets/images/pwa-icon.png" />
+        <title>Mi Bancolombia</title>
         {/* Capture PWA install prompt before React boots */}
         <script dangerouslySetInnerHTML={{ __html: PWA_INSTALL_SCRIPT }} />
         <ScrollViewStyleReset />

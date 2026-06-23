@@ -3,6 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -168,6 +169,11 @@ export default function RegisterScreen() {
         <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={C.text} />
         </TouchableOpacity>
+        <Image
+          source={require("../assets/images/pwa-icon.png")}
+          style={{ width: 32, height: 32, borderRadius: 8 }}
+          resizeMode="contain"
+        />
         <View style={styles.progressWrap}>
           {[1, 2, 3, 4].map((s) => (
             <View

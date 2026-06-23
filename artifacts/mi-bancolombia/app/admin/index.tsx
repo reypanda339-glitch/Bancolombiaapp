@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -67,12 +68,19 @@ export default function AdminDashboard() {
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerLabel}>PANEL ADMINISTRATIVO</Text>
-          <Text style={styles.headerTitle}>Bancolombia Admin</Text>
-          <Text style={styles.headerSub}>
-            {currentUser?.firstName} {currentUser?.lastName}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Image
+            source={require("../../assets/images/pwa-icon.png")}
+            style={{ width: 36, height: 36, borderRadius: 10 }}
+            resizeMode="contain"
+          />
+          <View>
+            <Text style={styles.headerLabel}>PANEL ADMINISTRATIVO</Text>
+            <Text style={styles.headerTitle}>Bancolombia Admin</Text>
+            <Text style={styles.headerSub}>
+              {currentUser?.firstName} {currentUser?.lastName}
+            </Text>
+          </View>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
           <Feather name="log-out" size={20} color={YELLOW} />

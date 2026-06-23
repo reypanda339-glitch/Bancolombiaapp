@@ -25,7 +25,13 @@ router.post("/users", async (req, res): Promise<void> => {
     res.status(400).json({ error: "id, documentNumber, and pin are required" });
     return;
   }
-  const [user] = await db.insert(usersTable).values(data).returning();
+  const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.documentNumber, String(data.documentNumber)));
+  if (existing) {
+    res.status(409).json({ error: "Ya existe un usuario con ese número de documento" });
+    return;
+  }
+  const { createdAt: _ca, ...insertData } = data;
+  const [user] = await db.insert(usersTable).values(insertData).returning();
   res.status(201).json(user);
 });
 

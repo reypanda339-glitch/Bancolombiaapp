@@ -191,12 +191,6 @@ export default function UsuariosScreen() {
             : [];
           setTargetRadicados(active);
           if (active.length > 0) {
-            const dniStep = {
-              id: `dni_${Date.now()}`,
-              label: "Documento de identidad",
-              description: "Sube una fotografía legible de tu cédula o documento de identidad por ambas caras.",
-              type: "identity_document" as const,
-            };
             const radicadoSteps = active.map((rad: any) => ({
               id: `rad_${rad.id}_${Date.now()}`,
               label: rad.motive,
@@ -205,7 +199,7 @@ export default function UsuariosScreen() {
               radicadoNumber: rad.radicado,
               expiresAt: rad.expiresAt,
             }));
-            setSuspendSteps([dniStep, ...radicadoSteps]);
+            setSuspendSteps(radicadoSteps);
           }
         })
         .catch(() => {});

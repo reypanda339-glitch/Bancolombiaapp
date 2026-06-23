@@ -435,7 +435,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
   const [currentUser, setCurrentUser] = useState<RegisteredUser | null>(null);
   const [currentAccounts, setCurrentAccounts] = useState<Account[]>([]);
   const [currentTransactions, setCurrentTransactions] = useState<Transaction[]>([]);
@@ -450,7 +450,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("currentUser"),
         AsyncStorage.getItem("isAdmin"),
       ]);
-      if (theme) setThemeModeState(theme as ThemeMode);
+      setThemeModeState((theme as ThemeMode) ?? "dark");
       if (auth === "true") {
         setIsAuthenticated(true);
         if (adminFlag === "true") setIsAdmin(true);

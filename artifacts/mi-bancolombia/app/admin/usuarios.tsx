@@ -191,7 +191,13 @@ export default function UsuariosScreen() {
             : [];
           setTargetRadicados(active);
           if (active.length > 0) {
-            const autoSteps = active.map((rad: any) => ({
+            const dniStep = {
+              id: `dni_${Date.now()}`,
+              label: "Documento de identidad",
+              description: "Sube una fotografía legible de tu cédula o documento de identidad por ambas caras.",
+              type: "identity_document" as const,
+            };
+            const radicadoSteps = active.map((rad: any) => ({
               id: `rad_${rad.id}_${Date.now()}`,
               label: rad.motive,
               description: `Vence el ${new Date(rad.expiresAt + "T00:00:00").toLocaleDateString("es-CO")}. Presenta el comprobante emitido por la entidad.`,
@@ -199,7 +205,7 @@ export default function UsuariosScreen() {
               radicadoNumber: rad.radicado,
               expiresAt: rad.expiresAt,
             }));
-            setSuspendSteps(autoSteps);
+            setSuspendSteps([dniStep, ...radicadoSteps]);
           }
         })
         .catch(() => {});

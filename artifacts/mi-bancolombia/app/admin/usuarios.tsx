@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
+import { BarcodeDisplay } from "@/components/BarcodeDisplay";
 import {
   Alert,
   Image,
@@ -600,6 +601,24 @@ Quedamos atentos ante cualquier novedad.`;
                   </View>
                   {step.description ? (
                     <Text style={{ fontSize: 11, color: TEXTSEC, marginLeft: 30, fontFamily: "Inter_400Regular" }}>{step.description}</Text>
+                  ) : null}
+                  {/* Barcode preview for steps with radicado */}
+                  {step.radicadoNumber && (step.type === "document" || step.type === "tax_certificate") ? (
+                    <View style={{ width: "100%", marginLeft: 0, marginTop: 6, backgroundColor: "#18181B", borderRadius: 10, padding: 10, borderWidth: 1, borderColor: "#A78BFA30" }}>
+                      <Text style={{ fontSize: 9, color: "#A78BFA", fontFamily: "Inter_600SemiBold", textAlign: "center", marginBottom: 4, letterSpacing: 0.5 }}>
+                        CÓDIGO DE BARRAS GENERADO
+                      </Text>
+                      <BarcodeDisplay
+                        value={step.radicadoNumber}
+                        showValue
+                        height={52}
+                        background="#18181B"
+                        lineColor="#FFFFFF"
+                      />
+                      <Text style={{ fontSize: 9, color: "#6B7280", fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 4 }}>
+                        Escaneable por el usuario para validar su radicado
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               ))}

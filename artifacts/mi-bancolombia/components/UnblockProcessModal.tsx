@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import type { SuspensionStep, SubmissionType } from "@/context/AppContext";
 import { useApp } from "@/context/AppContext";
+import { BarcodeDisplay } from "@/components/BarcodeDisplay";
 
 const GREEN  = "#22C55E";
 const RED    = "#EF4444";
@@ -31,6 +33,23 @@ function normalize(s: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/* Try to detect a barcode from an image URI using BarcodeDetector API (web) */
+async function detectBarcodeFromImageUri(uri: string): Promise<string | null> {
+  if (Platform.OS !== "web") return null;
+  if (typeof (window as any).BarcodeDetector === "undefined") return null;
+  try {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    const img = await createImageBitmap(blob);
+    const detector = new (window as any).BarcodeDetector({
+      formats: ["code_128", "code_39", "code_93", "qr_code", "ean_13", "ean_8"],
+    });
+    const results = await detector.detect(img);
+    if (results.length > 0) return results[0].rawValue as string;
+  } catch {}
+  return null;
 }
 
 function StepTypeIcon({ type }: { type?: string }) {
@@ -50,8 +69,7 @@ function StepTypeLabel({ type }: { type?: string }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PANEL UNIVERSAL — siempre muestra las 3 opciones sin importar
-   el tipo de paso: foto · escanear QR · radicado manual
+   PANEL UNIVERSAL — 3 opciones: foto/galería · escanear · manual
 ══════════════════════════════════════════════════════════════ */
 function UniversalStepPanel({
   step,
@@ -71,6 +89,7 @@ function UniversalStepPanel({
   const [scanning,   setScanning]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState("");
+  const [scanResult, setScanResult] = useState<string | null>(null);
 
   /* manual form fields */
   const [docNumber, setDocNumber] = useState("");
@@ -97,69 +116,132 @@ function UniversalStepPanel({
     }
   };
 
-  /* ── Foto / cámara ── */
-  const handlePhoto = () => {
-    if (isIdentity) {
+  /* ── Request camera permissions ── */
+  const requestPermissions = async (): Promise<boolean> => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert(
-        "Fotografiar documento",
-        "Ajusta el documento frente a la cámara. Se capturarán ambas caras automáticamente.",
+        "Permiso de cámara",
+        "Necesitamos acceso a la cámara para fotografiar tu documento.",
         [
           { text: "Cancelar", style: "cancel" },
-          {
-            text: "Capturar",
-            onPress: () => {
-              setScanning(true);
-              setError("");
-              setTimeout(() => {
-                setScanning(false);
-                setDocNumber(currentUser?.documentNumber ?? "");
-                setFullName(`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim());
-                setActiveTab("manual");
-              }, 2200);
-            },
-          },
+          { text: "Configuración", onPress: () => Linking.openSettings() },
         ]
       );
+      return false;
+    }
+    return true;
+  };
+
+  /* ── Process a picked image: detect barcode or extract text ── */
+  const processPickedImage = async (uri: string) => {
+    if (!isIdentity) {
+      // Try to detect barcode from image
+      setScanning(true);
+      const detected = await detectBarcodeFromImageUri(uri);
+      setScanning(false);
+      if (detected) {
+        setScanResult(`Código detectado: ${detected}`);
+        setRadicado(detected);
+        setActiveTab("manual");
+      } else {
+        setScanResult("Imagen cargada. Verifica el número de radicado o ingrésalo manualmente.");
+        // Prefill with assigned radicado if available
+        if (step.radicadoNumber) setRadicado(step.radicadoNumber);
+        setActiveTab("manual");
+      }
     } else {
-      Alert.alert(
-        "Subir imagen del documento",
-        "Adjunta la imagen completa del documento. Asegúrate de que el código de barras y el número de radicado sean legibles.",
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Adjuntar",
-            onPress: () => {
-              setScanning(true);
-              setError("");
-              setTimeout(() => {
-                setScanning(false);
-                const generatedRad = step.radicadoNumber ?? `2024-${Math.floor(1000000 + Math.random() * 9000000)}`;
-                setRadicado(generatedRad);
-                setActiveTab("manual");
-              }, 1800);
-            },
-          },
-        ]
-      );
+      // Identity: prefill with user data
+      setScanResult("Documento fotografiado. Verifica los datos o ingrésalos manualmente.");
+      setDocNumber(currentUser?.documentNumber ?? "");
+      setFullName(`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim());
+      setActiveTab("manual");
     }
   };
 
-  /* ── Escanear QR / código de barras ── */
-  const handleQR = () => {
-    setScanning(true);
+  /* ── Foto / cámara (expo-image-picker) ── */
+  const handlePhoto = async () => {
+    const ok = await requestPermissions();
+    if (!ok) return;
     setError("");
-    setTimeout(() => {
-      setScanning(false);
-      if (isIdentity) {
-        setDocNumber(currentUser?.documentNumber ?? "");
-        setFullName(`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim());
-        setActiveTab("manual");
-      } else {
-        const generatedRad = step.radicadoNumber ?? `2024-${Math.floor(1000000 + Math.random() * 9000000)}`;
-        setRadicado(generatedRad);
-        setActiveTab("manual");
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]) {
+        await processPickedImage(result.assets[0].uri);
       }
-    }, 2000);
+    } catch (err) {
+      setError("No se pudo abrir la cámara. Inténtalo de nuevo.");
+    }
+  };
+
+  /* ── Galería (expo-image-picker) ── */
+  const handleGallery = async () => {
+    setError("");
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permiso de galería", "Necesitamos acceso a tu galería.");
+      return;
+    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]) {
+        await processPickedImage(result.assets[0].uri);
+      }
+    } catch {
+      setError("No se pudo acceder a la galería.");
+    }
+  };
+
+  /* ── Escanear QR / código de barras via cámara ── */
+  const handleScan = async () => {
+    setError("");
+    setScanResult(null);
+    // On web: use camera + BarcodeDetector
+    // On native: use camera and try to detect
+    const ok = await requestPermissions();
+    if (!ok) return;
+    setScanning(true);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.95,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const detected = await detectBarcodeFromImageUri(result.assets[0].uri);
+        setScanning(false);
+        if (detected) {
+          setScanResult(`✓ Código detectado: ${detected}`);
+          if (isIdentity) {
+            setDocNumber(currentUser?.documentNumber ?? "");
+            setFullName(`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim());
+          } else {
+            setRadicado(detected);
+          }
+          setActiveTab("manual");
+        } else {
+          // Could not auto-detect, ask user to enter manually
+          setScanResult(
+            "No se detectó automáticamente el código. Ingresa el número manualmente o intenta con mejor iluminación."
+          );
+          if (step.radicadoNumber && !isIdentity) setRadicado(step.radicadoNumber);
+          setActiveTab("manual");
+        }
+      } else {
+        setScanning(false);
+      }
+    } catch {
+      setScanning(false);
+      setError("Error al acceder a la cámara.");
+    }
   };
 
   /* ── Validación y envío manual (identidad) ── */
@@ -191,7 +273,7 @@ function UniversalStepPanel({
     if (!clean) { setError("Ingresa el número de radicado."); return false; }
     if (clean.length < 4) { setError("El número de radicado es demasiado corto."); return false; }
     if (step.radicadoNumber && normalize(clean) !== normalize(step.radicadoNumber)) {
-      setError("El número de radicado no coincide con el asignado. Revísalo e inténtalo de nuevo.");
+      setError(`El número de radicado no coincide. El código asignado es: ${step.radicadoNumber}`);
       return false;
     }
     return true;
@@ -208,14 +290,14 @@ function UniversalStepPanel({
   };
 
   const TABS: { key: TabKey; icon: string; label: string; color: string }[] = [
-    { key: "photo",  icon: "camera", label: "Tomar foto",    color: BLUE   },
-    { key: "qr",     icon: "grid",   label: "Escanear QR",   color: GREEN  },
-    { key: "manual", icon: "edit-2", label: "Datos manuales", color: ORANGE },
+    { key: "photo",  icon: "camera",  label: "Cámara/Galería", color: BLUE   },
+    { key: "qr",     icon: "grid",    label: "Escanear código", color: GREEN  },
+    { key: "manual", icon: "edit-2",  label: "Manual",         color: ORANGE },
   ];
 
   return (
     <View style={{ gap: 12 }}>
-      {/* Tab selector — siempre las 3 opciones */}
+      {/* Tab selector */}
       <View style={{ flexDirection: "row", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
         {TABS.map((t, idx) => (
           <TouchableOpacity
@@ -229,7 +311,7 @@ function UniversalStepPanel({
               borderRightWidth: idx < TABS.length - 1 ? 1 : 0,
               borderColor: isDark ? "#2C2C2E" : "#E5E7EB",
             }}
-            onPress={() => { setActiveTab(t.key); setError(""); setScanning(false); }}
+            onPress={() => { setActiveTab(t.key); setError(""); setScanResult(null); }}
           >
             <Feather name={t.icon as any} size={16} color={activeTab === t.key ? t.color : textSec} />
             <Text style={{ fontSize: 9.5, fontFamily: "Inter_600SemiBold", color: activeTab === t.key ? t.color : textSec, textAlign: "center" }}>
@@ -239,54 +321,94 @@ function UniversalStepPanel({
         ))}
       </View>
 
-      {/* ── Pestaña: Tomar foto ── */}
+      {/* Scan result notice */}
+      {scanResult && (
+        <View style={{ flexDirection: "row", gap: 8, padding: 10, borderRadius: 10, backgroundColor: GREEN + "15" }}>
+          <Feather name="check-circle" size={14} color={GREEN} />
+          <Text style={{ fontSize: 11, color: GREEN, fontFamily: "Inter_400Regular", flex: 1 }}>{scanResult}</Text>
+        </View>
+      )}
+
+      {/* ── Pestaña: Cámara / Galería ── */}
       {activeTab === "photo" && (
-        <TouchableOpacity
-          style={[s.actionBtn, { backgroundColor: isDark ? "#1A2A3A" : "#EFF6FF", borderColor: BLUE }]}
-          onPress={handlePhoto}
-          disabled={scanning || submitting}
-        >
-          <View style={[s.actionIcon, { backgroundColor: BLUE + "22" }]}>
-            {scanning
-              ? <ActivityIndicator color={BLUE} size="small" />
-              : <Feather name="camera" size={22} color={BLUE} />}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: BLUE, fontFamily: "Inter_600SemiBold" }}>
-              {scanning ? "Procesando imagen..." : isIdentity ? "Fotografiar documento de identidad" : "Subir imagen del documento"}
-            </Text>
-            <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 15 }}>
-              {isIdentity
-                ? "Captura ambas caras de tu documento. Los datos se llenan automáticamente."
-                : "Adjunta la imagen completa. Asegúrate que el código y radicado sean legibles."}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <View style={{ gap: 10 }}>
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: isDark ? "#1A2A3A" : "#EFF6FF", borderColor: BLUE }]}
+            onPress={handlePhoto}
+            disabled={scanning || submitting}
+          >
+            <View style={[s.actionIcon, { backgroundColor: BLUE + "22" }]}>
+              {scanning
+                ? <ActivityIndicator color={BLUE} size="small" />
+                : <Feather name="camera" size={22} color={BLUE} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: BLUE, fontFamily: "Inter_600SemiBold" }}>
+                {scanning ? "Procesando..." : isIdentity ? "Fotografiar documento de identidad" : "Fotografiar documento"}
+              </Text>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 15 }}>
+                {isIdentity
+                  ? "Abre la cámara para fotografiar tu cédula o documento."
+                  : "Fotografía el código de barras del documento."}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: isDark ? "#1A2A1A" : "#F0FDF4", borderColor: GREEN }]}
+            onPress={handleGallery}
+            disabled={scanning || submitting}
+          >
+            <View style={[s.actionIcon, { backgroundColor: GREEN + "22" }]}>
+              <Feather name="image" size={22} color={GREEN} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: GREEN, fontFamily: "Inter_600SemiBold" }}>
+                Seleccionar desde galería
+              </Text>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 15 }}>
+                Elige una imagen de tu galería con el código de barras visible.
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ── Pestaña: Escanear QR / código de barras ── */}
       {activeTab === "qr" && (
-        <TouchableOpacity
-          style={[s.actionBtn, { backgroundColor: isDark ? "#1A2D2A" : "#F0FDF4", borderColor: GREEN }]}
-          onPress={handleQR}
-          disabled={scanning || submitting}
-        >
-          <View style={[s.actionIcon, { backgroundColor: GREEN + "22" }]}>
-            {scanning
-              ? <ActivityIndicator color={GREEN} size="small" />
-              : <Feather name="grid" size={22} color={GREEN} />}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: GREEN, fontFamily: "Inter_600SemiBold" }}>
-              {scanning ? "Leyendo código..." : "Escanear código QR / barras"}
-            </Text>
-            <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 15 }}>
-              {isIdentity
-                ? "Apunta la cámara al código de barras del reverso de tu cédula."
-                : "Apunta la cámara al código de barras o QR del documento."}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <View style={{ gap: 10 }}>
+          {/* Show the assigned barcode for reference */}
+          {step.radicadoNumber && !isIdentity && (
+            <View style={{ backgroundColor: isDark ? "#1C1C1E" : "#F9FAFB", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_500Medium", marginBottom: 6, textAlign: "center" }}>
+                CÓDIGO ASIGNADO — Escanear este código
+              </Text>
+              <BarcodeDisplay value={step.radicadoNumber} showValue height={60} background={isDark ? "#1C1C1E" : "#FFFFFF"} lineColor={isDark ? "#FFFFFF" : "#1C1C1E"} />
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: isDark ? "#1A2D2A" : "#F0FDF4", borderColor: GREEN }]}
+            onPress={handleScan}
+            disabled={scanning || submitting}
+          >
+            <View style={[s.actionIcon, { backgroundColor: GREEN + "22" }]}>
+              {scanning
+                ? <ActivityIndicator color={GREEN} size="small" />
+                : <Feather name="grid" size={22} color={GREEN} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: GREEN, fontFamily: "Inter_600SemiBold" }}>
+                {scanning ? "Leyendo código..." : "Escanear código de barras"}
+              </Text>
+              <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 15 }}>
+                {isIdentity
+                  ? "Apunta al código de barras del reverso de tu cédula."
+                  : "Apunta la cámara al código de barras del comprobante."}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ── Pestaña: Datos manuales ── */}
@@ -297,7 +419,7 @@ function UniversalStepPanel({
               <View>
                 <Text style={[s.fieldLabel, { color: textSec }]}>Número de documento</Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border }]}
+                  style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border, fontSize: 16 }]}
                   value={docNumber}
                   onChangeText={(v) => { setDocNumber(v); setError(""); }}
                   placeholder="Número del documento de identidad"
@@ -308,7 +430,7 @@ function UniversalStepPanel({
               <View>
                 <Text style={[s.fieldLabel, { color: textSec }]}>Nombre completo (como aparece en el documento)</Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border }]}
+                  style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border, fontSize: 16 }]}
                   value={fullName}
                   onChangeText={(v) => { setFullName(v); setError(""); }}
                   placeholder="Nombre y apellido"
@@ -325,12 +447,12 @@ function UniversalStepPanel({
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, padding: 10, borderRadius: 8, backgroundColor: PURPLE + "15" }}>
                   <Feather name="info" size={12} color={PURPLE} />
                   <Text style={{ fontSize: 11, color: PURPLE, fontFamily: "Inter_400Regular", flex: 1 }}>
-                    Tu número de radicado ha sido asignado. Encuéntralo bajo el código de barras del comprobante.
+                    Radicado asignado: <Text style={{ fontWeight: "700" }}>{step.radicadoNumber}</Text>. Encuéntralo bajo el código de barras del comprobante.
                   </Text>
                 </View>
               )}
               <TextInput
-                style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border, letterSpacing: 1 }]}
+                style={[s.input, { backgroundColor: inputBg, color: text, borderColor: error ? RED : border, letterSpacing: 1, fontSize: 16 }]}
                 value={radicado}
                 onChangeText={(v) => { setRadicado(v); setError(""); }}
                 placeholder="Ej: 2024-1234567"
@@ -353,35 +475,17 @@ function UniversalStepPanel({
         </View>
       ) : null}
 
-      {/* Confirm button (photo & manual tabs) */}
-      {(activeTab === "photo" || activeTab === "manual") && (
+      {/* Confirm button */}
+      {activeTab === "manual" && (
         <TouchableOpacity
           style={[s.confirmBtn, { opacity: submitting ? 0.6 : 1 }]}
-          onPress={activeTab === "photo" ? handlePhoto : handleManualConfirm}
+          onPress={handleManualConfirm}
           disabled={submitting}
         >
           {submitting
             ? <ActivityIndicator color="#1C1C1E" size="small" />
             : <Feather name="check" size={16} color="#1C1C1E" />}
-          <Text style={s.confirmBtnText}>
-            {activeTab === "photo"
-              ? (isIdentity ? "Abrir cámara" : "Seleccionar imagen")
-              : "Confirmar información"}
-          </Text>
-        </TouchableOpacity>
-      )}
-      {activeTab === "qr" && (
-        <TouchableOpacity
-          style={[s.confirmBtn, { backgroundColor: GREEN, opacity: submitting ? 0.6 : 1 }]}
-          onPress={handleQR}
-          disabled={submitting || scanning}
-        >
-          {scanning
-            ? <ActivityIndicator color="#1C1C1E" size="small" />
-            : <Feather name="grid" size={16} color="#1C1C1E" />}
-          <Text style={s.confirmBtnText}>
-            {scanning ? "Escaneando..." : "Iniciar escaneo"}
-          </Text>
+          <Text style={s.confirmBtnText}>Confirmar información</Text>
         </TouchableOpacity>
       )}
 
@@ -392,9 +496,9 @@ function UniversalStepPanel({
   );
 }
 
-/* ══════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    MAIN MODAL
-══════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════ */
 type Props = { visible: boolean; onClose: () => void; isDark: boolean };
 
 export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
@@ -534,6 +638,22 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
                             <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", marginBottom: 8, lineHeight: 17 }}>{step.description}</Text>
                           ) : null}
 
+                          {/* Show barcode for document steps with radicado */}
+                          {!isDone && step.radicadoNumber && (step.type === "document" || step.type === "tax_certificate") && (
+                            <View style={{ backgroundColor: isDark ? "#111" : "#F9FAFB", borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: isDark ? "#2C2C2E" : "#E5E7EB" }}>
+                              <Text style={{ fontSize: 10, color: textSec, fontFamily: "Inter_500Medium", textAlign: "center", marginBottom: 4 }}>
+                                CÓDIGO DE BARRAS · RADICADO
+                              </Text>
+                              <BarcodeDisplay
+                                value={step.radicadoNumber}
+                                showValue
+                                height={55}
+                                background={isDark ? "#111111" : "#FFFFFF"}
+                                lineColor={isDark ? "#FFFFFF" : "#1C1C1E"}
+                              />
+                            </View>
+                          )}
+
                           {isDone && step.completedAt && (
                             <Text style={{ fontSize: 11, color: GREEN + "AA", fontFamily: "Inter_400Regular" }}>
                               Enviado el {new Date(step.completedAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
@@ -577,48 +697,32 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
 
                 {allDone && (
                   <View style={{ marginTop: 16, padding: 20, borderRadius: 14, backgroundColor: GREEN + "15", borderWidth: 1, borderColor: GREEN + "40", alignItems: "center", gap: 10 }}>
-                    <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: GREEN + "22", alignItems: "center", justifyContent: "center" }}>
-                      <Feather name="check-circle" size={28} color={GREEN} />
-                    </View>
+                    <Feather name="check-circle" size={32} color={GREEN} />
                     <Text style={{ fontSize: 15, fontWeight: "700", color: GREEN, fontFamily: "Inter_700Bold", textAlign: "center" }}>
-                      ¡Documentación enviada!
+                      ¡Todos los pasos completados!
                     </Text>
-                    <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 }}>
-                      Tu solicitud está en revisión. El equipo de Bancolombia verificará la información y te notificará el resultado en los próximos días hábiles.
+                    <Text style={{ fontSize: 13, color: textSec, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 }}>
+                      Tu caso será revisado por el equipo de Bancolombia en los próximos 1–3 días hábiles.
                     </Text>
                   </View>
                 )}
               </View>
             )}
 
-            {steps.length === 0 && docs.length === 0 && (
-              <View style={{ margin: 20, padding: 20, borderRadius: 12, backgroundColor: isDark ? "#1C1C1E" : "#F3F4F6", alignItems: "center", gap: 8 }}>
-                <Feather name="clock" size={24} color={textSec} />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: text, fontFamily: "Inter_600SemiBold", textAlign: "center" }}>Proceso en configuración</Text>
-                <Text style={{ fontSize: 12, color: textSec, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 18 }}>
-                  El equipo de Bancolombia está preparando los pasos de tu proceso. Recibirás una notificación pronto.
-                </Text>
-              </View>
-            )}
-
-            {/* Botón WhatsApp asesor */}
-            <View style={{ marginHorizontal: 20, marginTop: 20, gap: 10 }}>
+            {/* WhatsApp support */}
+            {supportPhone && (
               <TouchableOpacity
-                style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 14, backgroundColor: "#25D36622", borderWidth: 1.5, borderColor: "#25D36660" }}
-                onPress={() => Linking.openURL(`https://wa.me/${supportPhone}?text=Hola,%20necesito%20ayuda%20con%20el%20desbloqueo%20de%20mi%20cuenta`).catch(() => {})}
+                style={{ marginHorizontal: 20, marginTop: 20, flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 12, backgroundColor: "#25D36620", borderWidth: 1, borderColor: "#25D36640" }}
+                onPress={() => Linking.openURL(`https://wa.me/${supportPhone}`)}
               >
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#25D36622", alignItems: "center", justifyContent: "center" }}>
-                  <Feather name="message-circle" size={20} color="#25D366" />
-                </View>
+                <Feather name="message-circle" size={18} color="#25D366" />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#25D366", fontFamily: "Inter_700Bold" }}>Hablar con un asesor</Text>
-                  <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-                    Chat directo por WhatsApp con soporte Bancolombia
-                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#25D366", fontFamily: "Inter_700Bold" }}>¿Necesitas ayuda?</Text>
+                  <Text style={{ fontSize: 11, color: textSec, fontFamily: "Inter_400Regular", marginTop: 1 }}>Contáctanos por WhatsApp</Text>
                 </View>
-                <Feather name="chevron-right" size={18} color="#25D366" />
+                <Feather name="chevron-right" size={15} color="#25D366" />
               </TouchableOpacity>
-            </View>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -627,53 +731,20 @@ export function UnblockProcessModal({ visible, onClose, isDark }: Props) {
 }
 
 const s = StyleSheet.create({
-  dot: {
-    width: 28, height: 28, borderRadius: 14,
-    alignItems: "center", justifyContent: "center",
-  },
-  stepCard: {
-    borderRadius: 14, padding: 14, borderWidth: 1,
-  },
-  advanceBtn: {
-    flexDirection: "row", alignItems: "center", gap: 7,
-    borderWidth: 1.5, borderRadius: 10,
-    paddingVertical: 10, paddingHorizontal: 14,
-    alignSelf: "flex-start", marginTop: 10,
-  },
-  actionBtn: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    borderWidth: 1, borderRadius: 12, padding: 14,
-  },
-  actionIcon: {
-    width: 42, height: 42, borderRadius: 12,
-    alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  fieldLabel: {
-    fontSize: 11, fontFamily: "Inter_500Medium",
-    textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6,
-  },
-  input: {
-    borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14,
-    fontSize: 14, fontFamily: "Inter_400Regular", borderWidth: 1,
-  },
-  errorBox: {
-    flexDirection: "row", alignItems: "flex-start", gap: 8,
-    backgroundColor: RED + "15", borderRadius: 10, borderWidth: 1,
-    borderColor: RED + "40", padding: 12,
-  },
-  errorText: {
-    flex: 1, fontSize: 12, color: RED, fontFamily: "Inter_500Medium", lineHeight: 17,
-  },
-  confirmBtn: {
-    backgroundColor: YELLOW, borderRadius: 10,
-    paddingVertical: 12, paddingHorizontal: 16,
-    flexDirection: "row", alignItems: "center",
-    gap: 8, justifyContent: "center",
-  },
-  confirmBtnText: {
-    fontSize: 14, fontWeight: "700", color: "#1C1C1E", fontFamily: "Inter_700Bold",
-  },
-  cancelBtn: {
-    alignItems: "center", paddingVertical: 10,
-  },
+  dot: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  stepCard: { borderWidth: 1, borderRadius: 12, padding: 14 },
+  advanceBtn: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5 },
+
+  actionBtn: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 12, borderWidth: 1.5 },
+  actionIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+
+  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 },
+  input: { height: 46, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontFamily: "Inter_400Regular" },
+
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 10, backgroundColor: "#EF444420" },
+  errorText: { fontSize: 12, color: "#EF4444", fontFamily: "Inter_400Regular", flex: 1 },
+
+  confirmBtn: { backgroundColor: "#FDDA24", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13, borderRadius: 12 },
+  confirmBtnText: { fontSize: 14, fontWeight: "700", color: "#1C1C1E", fontFamily: "Inter_700Bold" },
+  cancelBtn: { alignItems: "center", paddingVertical: 10 },
 });

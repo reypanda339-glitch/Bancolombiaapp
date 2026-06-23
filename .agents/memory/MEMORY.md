@@ -5,3 +5,4 @@
 - [Mi Bancolombia +html.tsx PWA CSS](mi-bancolombia-html-tsx.md) — NEVER use body{position:fixed} in +html.tsx; it blanks out React Native Web entirely.
 - [Mi Bancolombia TextInput fontSize rule](mi-bancolombia-textinput-fontsize.md) — All TextInputs must have fontSize≥16 to prevent iOS PWA zoom; all screens fixed as of 2026-06-23.
 - [Mi Bancolombia PWA build](mi-bancolombia-pwa-build.md) — +html.tsx is NOT applied in expo export --platform web (Metro). All PWA meta/SW/manifest must be injected via post-processing in scripts/build.js. Assets land in dist/assets/ (not dist/assets_expo/). Install button must only show after beforeinstallprompt fires.
+- [Mi Bancolombia barcode architecture](mi-bancolombia-barcodes.md) — BarcodeDisplay uses platform split (.web.tsx = jsbarcode→SVG ref, .tsx = native fallback). BarcodeDetector API (Chrome/Android) used for scanning; falls back to manual entry on iOS/Firefox.

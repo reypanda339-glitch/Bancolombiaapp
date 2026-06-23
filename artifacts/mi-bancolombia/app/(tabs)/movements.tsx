@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TransactionItem } from "@/components/TransactionItem";
+import { TransactionReceiptModal } from "@/components/TransactionReceiptModal";
 import { useApp } from "@/context/AppContext";
+import type { Transaction } from "@/context/AppContext";
 import { formatBalance } from "@/constants/countries";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -69,6 +71,7 @@ export default function MovementsScreen() {
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [selectedAccount, setSelectedAccount] = useState(accounts[0]?.id ?? "");
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   const [filterCategory, setFilterCategory] = useState("Todas");
   const [filterDateRange, setFilterDateRange] = useState("Todos");
@@ -250,6 +253,7 @@ export default function MovementsScreen() {
                       currencySymbol={currencySymbol}
                       isDark={isDark}
                       C={C}
+                      onPress={() => setSelectedTx(tx)}
                     />
                     {i < grouped[date].length - 1 && <View style={[styles.divider, { backgroundColor: C.divider, marginLeft: 70 }]} />}
                   </React.Fragment>
@@ -260,6 +264,17 @@ export default function MovementsScreen() {
         )}
         <View style={{ height: 110 }} />
       </ScrollView>
+
+      {/* Transaction Receipt Modal */}
+      <TransactionReceiptModal
+        visible={selectedTx !== null}
+        transaction={selectedTx}
+        account={account}
+        onClose={() => setSelectedTx(null)}
+        isDark={isDark}
+        C={C}
+        balanceVisible={balanceVisible}
+      />
 
       {/* Filter Modal */}
       <Modal visible={showFilterModal} animationType="slide" presentationStyle="pageSheet">

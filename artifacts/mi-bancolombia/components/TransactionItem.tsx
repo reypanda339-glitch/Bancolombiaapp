@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Transaction } from "@/context/AppContext";
 import type { ColorScheme } from "@/constants/colors";
 import { formatBalance } from "@/constants/countries";
@@ -41,6 +41,7 @@ type Props = {
   currencySymbol?: string;
   isDark?: boolean;
   C?: ColorScheme;
+  onPress?: () => void;
 };
 
 export function TransactionItem({
@@ -50,6 +51,7 @@ export function TransactionItem({
   currencySymbol = "$",
   isDark = false,
   C,
+  onPress,
 }: Props) {
   const icon = CATEGORY_ICONS[transaction.category] ?? "circle";
   const iconColor = CATEGORY_COLORS[transaction.category] ?? "#6B7280";
@@ -60,7 +62,7 @@ export function TransactionItem({
   const debitColor = isDark ? "rgba(255,255,255,0.75)" : "#1C1C1E";
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.iconWrap, { backgroundColor: iconColor + "22" }]}>
         <Feather name={icon} size={18} color={iconColor} />
       </View>
@@ -72,17 +74,20 @@ export function TransactionItem({
           {transaction.category} · {formatDate(transaction.date)}
         </Text>
       </View>
-      <Text
-        style={[
-          styles.amount,
-          isCredit ? styles.credit : { color: debitColor },
-        ]}
-      >
-        {balanceVisible
-          ? `${isCredit ? "+" : "-"}${amountStr}`
-          : "•••••"}
-      </Text>
-    </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Text
+          style={[
+            styles.amount,
+            isCredit ? styles.credit : { color: debitColor },
+          ]}
+        >
+          {balanceVisible
+            ? `${isCredit ? "+" : "-"}${amountStr}`
+            : "•••••"}
+        </Text>
+        {onPress && <Feather name="chevron-right" size={14} color={subColor} />}
+      </View>
+    </TouchableOpacity>
   );
 }
 

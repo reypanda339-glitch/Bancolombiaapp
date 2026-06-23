@@ -67,7 +67,7 @@ export default function LoginScreen() {
   }, []);
 
   const handleInstall = async () => {
-    // Android Chrome / Edge: use the deferred native install prompt (automatic).
+    // Android Chrome / Edge: native install dialog — fully automatic.
     const deferred = (window as any).__pwaInstallPrompt;
     if (deferred) {
       try {
@@ -81,20 +81,13 @@ export default function LoginScreen() {
       return;
     }
 
-    // iOS Safari: auto-install is not possible via API.
-    // Show a brief native alert with the exact steps — shortest path available.
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIos) {
-      (window as any).alert(
-        "Para instalar Mi Bancolombia en iOS:\n\n1. Toca el botón Compartir (↑) en Safari\n2. Selecciona «Añadir a pantalla de inicio»\n3. Confirma tocando «Añadir»"
-      );
-      return;
+    // iOS Safari: open the native Share sheet — closest to automatic on iOS.
+    // The user sees "Add to Home Screen" as the first relevant option.
+    if (navigator.share) {
+      try {
+        await navigator.share({ url: window.location.href });
+      } catch { /* user cancelled */ }
     }
-
-    // Other browsers (Firefox, etc.): guide to menu.
-    (window as any).alert(
-      "Para instalar Mi Bancolombia:\n\nAbre el menú de tu navegador (⋮ o ≡) y busca la opción «Instalar aplicación» o «Añadir a pantalla de inicio»."
-    );
   };
 
   const { login } = useApp();

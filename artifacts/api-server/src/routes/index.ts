@@ -10,6 +10,7 @@ import auditLogsRouter from "./auditLogs";
 import pinChangesRouter from "./pinChanges";
 import pwaEventsRouter from "./pwaEvents";
 import settingsRouter from "./settings";
+import radicadosRouter from "./radicados";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(auditLogsRouter);
 router.use(pinChangesRouter);
 router.use(pwaEventsRouter);
 router.use(settingsRouter);
+router.use(radicadosRouter);
 
 export default router;

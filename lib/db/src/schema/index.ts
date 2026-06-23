@@ -7,3 +7,4 @@ export * from "./auditLogs";
 export * from "./pinChanges";
 export * from "./pwaEvents";
 export * from "./settings";
+export * from "./radicados";

@@ -68,24 +68,10 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="movimientos"
-        options={{
-          title: "Movimientos",
-          tabBarIcon: ({ focused }) => <TabIcon name="activity" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
         name="apelacion"
         options={{
           title: "Apelación",
           tabBarIcon: ({ focused }) => <TabIcon name="shield" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="auditoria"
-        options={{
-          title: "Auditoría",
-          tabBarIcon: ({ focused }) => <TabIcon name="list" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -94,6 +80,18 @@ export default function AdminLayout() {
           title: "Config.",
           tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
         }}
+      />
+      <Tabs.Screen
+        name="movimientos"
+        options={{ href: null, tabBarItemStyle: { display: "none" } }}
+      />
+      <Tabs.Screen
+        name="auditoria"
+        options={{ href: null, tabBarItemStyle: { display: "none" } }}
+      />
+      <Tabs.Screen
+        name="radicado"
+        options={{ href: null, tabBarItemStyle: { display: "none" } }}
       />
     </Tabs>
   );

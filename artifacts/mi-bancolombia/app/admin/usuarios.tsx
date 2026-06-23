@@ -19,6 +19,7 @@ import type { RegisteredUser, SuspensionStep, StepType } from "@/context/AppCont
 import { ALL_DOC_TYPES, DOC_TYPE_LABELS, COUNTRIES, getCountryByCode, formatBalance } from "@/constants/countries";
 import * as Clipboard from "expo-clipboard";
 import type { DocType } from "@/constants/countries";
+import { DateInput } from "@/components/DateInput";
 
 const BG = "#0F1320";
 const CARD = "#161B2E";
@@ -866,7 +867,7 @@ Quedamos atentos ante cualquier novedad.`;
                 ))}
               </View>
               <EF label="Número de documento *" value={newUser.documentNumber} onChange={(v) => setNewUser((p) => ({ ...p, documentNumber: v }))} keyboard="default" />
-              <EF label="Fecha nacimiento (DD/MM/AAAA) *" value={newUser.birthDate} onChange={(v) => setNewUser((p) => ({ ...p, birthDate: v }))} />
+              <DateEF label="Fecha nacimiento *" value={newUser.birthDate} onChange={(v) => setNewUser((p) => ({ ...p, birthDate: v }))} />
               <EF label="Email *" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} keyboard="email-address" />
               <EF label="Teléfono (10 dígitos) *" value={newUser.phone} onChange={(v) => setNewUser((p) => ({ ...p, phone: v }))} keyboard="phone-pad" maxLen={10} />
               <EF label="Dirección de residencia" value={newUser.address} onChange={(v) => setNewUser((p) => ({ ...p, address: v }))} />
@@ -904,6 +905,22 @@ function EF({ label, value, onChange, keyboard, maxLen }: { label: string; value
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.editLabel}>{label}</Text>
       <TextInput style={styles.editInput} value={value} onChangeText={onChange} keyboardType={keyboard ?? "default"} maxLength={maxLen} placeholderTextColor={TEXTSEC} />
+    </View>
+  );
+}
+
+function DateEF({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Text style={styles.editLabel}>{label}</Text>
+      <DateInput
+        value={value}
+        onChange={onChange}
+        outputFormat="DMY"
+        isDark
+        maxDate={new Date().toISOString().slice(0, 10)}
+        inputStyle={{ paddingHorizontal: 12, paddingVertical: 11, fontSize: 14 }}
+      />
     </View>
   );
 }

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 import type { DocType } from "@/constants/countries";
+import { DateInput } from "@/components/DateInput";
 import { ALL_DOC_TYPES, DOC_TYPE_LABELS } from "@/constants/countries";
 import { PinPad } from "@/components/PinPad";
 
@@ -266,19 +267,14 @@ export default function RegisterScreen() {
             <TextInput style={inputStyle} value={secondLastName} onChangeText={setSecondLastName} placeholder="Opcional" placeholderTextColor={C.textLight} autoCapitalize="words" />
 
             <Text style={[labelStyle, { marginTop: 14 }]}>Fecha de nacimiento *</Text>
-            <TextInput
-              style={inputStyle}
+            <DateInput
               value={birthDate}
-              onChangeText={(t) => {
-                let v = t.replace(/[^\d]/g, "");
-                if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
-                if (v.length > 5) v = v.slice(0, 5) + "/" + v.slice(5);
-                setBirthDate(v.slice(0, 10));
-              }}
-              placeholder="DD/MM/AAAA"
-              placeholderTextColor={C.textLight}
-              keyboardType="numeric"
-              maxLength={10}
+              onChange={setBirthDate}
+              outputFormat="DMY"
+              error={!!errors.birthDate}
+              isDark={isDark}
+              maxDate={new Date().toISOString().slice(0, 10)}
+              style={{ marginTop: 4 }}
             />
             {errors.birthDate && <Text style={errorStyle}>{errors.birthDate}</Text>}
           </View>

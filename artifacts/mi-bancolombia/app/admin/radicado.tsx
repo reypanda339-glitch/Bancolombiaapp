@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import type { RegisteredUser } from "@/context/AppContext";
+import { DateInput } from "@/components/DateInput";
 
 const BG      = "#0A0E27";
 const CARD    = "#111827";
@@ -439,18 +440,15 @@ export default function RadicadoScreen() {
 
           {/* Expiry date */}
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Fecha de vencimiento *</Text>
-          <TextInput
-            style={[styles.input, errors.expires ? { borderColor: RED + "80" } : {}]}
+          <DateInput
             value={expiresAt}
-            onChangeText={(v) => { setExpiresAt(v); setErrors((e) => ({ ...e, expires: "" })); }}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={TEXTSEC}
-            keyboardType="numbers-and-punctuation"
-            fontSize={16}
+            onChange={(v) => { setExpiresAt(v); setErrors((e) => ({ ...e, expires: "" })); }}
+            outputFormat="YMD"
+            error={!!errors.expires}
+            isDark
+            minDate={new Date().toISOString().slice(0, 10)}
+            style={{ marginTop: 4 }}
           />
-          <Text style={{ fontSize: 11, color: TEXTSEC, fontFamily: "Inter_400Regular", marginTop: 4 }}>
-            Formato: AAAA-MM-DD · Fecha actual: {new Date().toISOString().slice(0, 10)}
-          </Text>
           {errors.expires ? <Text style={styles.fieldError}>{errors.expires}</Text> : null}
 
           {/* Create button */}

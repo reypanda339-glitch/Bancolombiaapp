@@ -843,6 +843,7 @@ function ExtractosModal({ visible, onClose, accounts, C }: {
    MODAL: Centro de ayuda
 ══════════════════════════════════════════════════════════════ */
 function HelpModal({ visible, onClose, C }: { visible: boolean; onClose: () => void; C: ReturnType<typeof useTheme>["C"] }) {
+  const { supportPhone } = useApp();
   const faq = [
     { q: "¿Cómo cambio mi clave?", a: "Ve a Ajustes → Seguridad → Cambiar clave y sigue los pasos." },
     { q: "¿Cómo bloqueo mi tarjeta?", a: "Ve a Mis productos, selecciona la tarjeta y elige 'Bloquear tarjeta'." },
@@ -875,7 +876,7 @@ function HelpModal({ visible, onClose, C }: { visible: boolean; onClose: () => v
               <Feather name="chevron-right" size={16} color={C.textLight} />
             </TouchableOpacity>
             <View style={[styles.divider, { backgroundColor: C.divider, marginLeft: 68 }]} />
-            <TouchableOpacity style={[styles.menuItem, { paddingVertical: 16 }]} onPress={() => Linking.openURL("https://wa.me/573132095988").catch(() => {})}>
+            <TouchableOpacity style={[styles.menuItem, { paddingVertical: 16 }]} onPress={() => Linking.openURL(`https://wa.me/${supportPhone}?text=Hola,%20necesito%20ayuda%20con%20mi%20cuenta`).catch(() => {})}>
               <View style={[styles.menuIconWrap, { backgroundColor: "#25D36620" }]}>
                 <Feather name="message-circle" size={18} color="#25D366" />
               </View>
@@ -927,6 +928,7 @@ function HelpModal({ visible, onClose, C }: { visible: boolean; onClose: () => v
    MODAL: Chat con Bancolombia
 ══════════════════════════════════════════════════════════════ */
 function ChatModal({ visible, onClose, C }: { visible: boolean; onClose: () => void; C: ReturnType<typeof useTheme>["C"] }) {
+  const { supportPhone } = useApp();
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={[styles.sheetContainer, { backgroundColor: C.background }]}>
@@ -952,7 +954,7 @@ function ChatModal({ visible, onClose, C }: { visible: boolean; onClose: () => v
           <View style={[styles.optionsCard, { backgroundColor: C.surface }]}>
             <TouchableOpacity
               style={[styles.menuItem, { paddingVertical: 18 }]}
-              onPress={() => { onClose(); Linking.openURL("https://wa.me/573132095988?text=Hola,%20necesito%20ayuda%20con%20mi%20cuenta").catch(() => {}); }}
+              onPress={() => { onClose(); Linking.openURL(`https://wa.me/${supportPhone}?text=Hola,%20necesito%20ayuda%20con%20mi%20cuenta`).catch(() => {}); }}
             >
               <View style={[styles.menuIconWrap, { backgroundColor: "#25D36620" }]}>
                 <Feather name="message-square" size={18} color="#25D366" />

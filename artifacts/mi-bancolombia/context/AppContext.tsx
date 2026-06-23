@@ -120,6 +120,8 @@ type AppContextType = {
   toggleBalanceVisible: () => void;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
+  supportPhone: string;
+  setSupportPhone: (phone: string) => Promise<void>;
   reloadUserData: () => Promise<void>;
   getAllUsers: () => Promise<RegisteredUser[]>;
   updateUser: (id: string, data: Partial<RegisteredUser>) => Promise<void>;
@@ -443,17 +445,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentAccounts, setCurrentAccounts] = useState<Account[]>([]);
   const [currentTransactions, setCurrentTransactions] = useState<Transaction[]>([]);
   const [currentCards, setCurrentCards] = useState<Card[]>([]);
+  const [supportPhone, setSupportPhoneState] = useState("573132095988");
 
   useEffect(() => {
     (async () => {
       await seedAdmin();
-      const [auth, theme, userJson, adminFlag] = await Promise.all([
+      const [auth, theme, userJson, adminFlag, phone] = await Promise.all([
         AsyncStorage.getItem("auth"),
         AsyncStorage.getItem("themeMode"),
         AsyncStorage.getItem("currentUser"),
         AsyncStorage.getItem("isAdmin"),
+        AsyncStorage.getItem("supportPhone"),
       ]);
       setThemeModeState((theme as ThemeMode) ?? "dark");
+      if (phone) setSupportPhoneState(phone);
       if (auth === "true") {
         setIsAuthenticated(true);
         if (adminFlag === "true") setIsAdmin(true);
@@ -730,6 +735,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return stored ? JSON.parse(stored) : [];
   }, []);
 
+  const setSupportPhone = useCallback(async (phone: string) => {
+    const clean = phone.replace(/\D/g, "");
+    setSupportPhoneState(clean);
+    await AsyncStorage.setItem("supportPhone", clean);
+  }, []);
+
   const displayName = currentUser?.firstName ?? "";
   const accounts = currentUser && !currentUser.isAdmin ? currentAccounts : [];
   const transactions = currentUser && !currentUser.isAdmin ? currentTransactions : [];
@@ -766,6 +777,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addAuditLog,
         getLoginEvents,
         requestLocationPermission,
+        supportPhone,
+        setSupportPhone,
       }}
     >
       {children}

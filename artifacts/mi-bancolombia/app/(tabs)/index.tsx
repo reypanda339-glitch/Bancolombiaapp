@@ -210,9 +210,10 @@ function ClaveModal({ visible, onClose, C, code }: {
 
 /* ─── Help Modal ─── */
 function HelpModal({ visible, onClose, C }: { visible: boolean; onClose: () => void; C: any }) {
+  const { supportPhone } = useApp();
   const options = [
     { icon: "phone", label: "Línea de atención", sub: "01 8000 912345 · Gratis desde Colombia", action: () => Linking.openURL("tel:018000912345").catch(() => {}) },
-    { icon: "message-circle", label: "WhatsApp", sub: "Escríbenos al +57 313 209 5988", action: () => Linking.openURL("https://wa.me/573132095988?text=Hola,%20necesito%20ayuda").catch(() => {}) },
+    { icon: "message-circle", label: "WhatsApp", sub: `Escríbenos al +${supportPhone}`, action: () => Linking.openURL(`https://wa.me/${supportPhone}?text=Hola,%20necesito%20ayuda`).catch(() => {}) },
     { icon: "globe", label: "Bancolombia.com", sub: "Visita nuestro portal web", action: () => Linking.openURL("https://www.grupobancolombia.com").catch(() => {}) },
     { icon: "map-pin", label: "Sucursales y cajeros", sub: "Encuentra el punto más cercano", action: () => Linking.openURL("https://www.bancolombia.com/personas/sucursales-cajeros").catch(() => {}) },
   ];
@@ -380,7 +381,7 @@ function AccountsSection({ isDark, C }: { isDark: boolean; C: any }) {
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function HomeScreen() {
-  const { userName, logout } = useApp();
+  const { userName, logout, supportPhone } = useApp();
   const { C, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -449,7 +450,7 @@ export default function HomeScreen() {
             <Feather name="help-circle" size={19} color={C.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            onPress={() => Linking.openURL("https://wa.me/573132095988?text=Hola,%20necesito%20ayuda%20con%20mi%20cuenta").catch(() => {})}>
+            onPress={() => Linking.openURL(`https://wa.me/${supportPhone}?text=Hola,%20necesito%20ayuda%20con%20mi%20cuenta`).catch(() => {})}>
             <Feather name="message-circle" size={19} color={C.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}

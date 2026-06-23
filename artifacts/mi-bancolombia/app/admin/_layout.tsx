@@ -81,6 +81,13 @@ export default function AdminLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="shield" focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="configuracion"
+        options={{
+          title: "Config.",
+          tabBarIcon: ({ focused }) => <TabIcon name="settings" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }

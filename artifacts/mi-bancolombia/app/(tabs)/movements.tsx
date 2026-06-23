@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,11 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TransactionItem } from "@/components/TransactionItem";
-import Colors from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-
-const C = Colors.light;
-const YELLOW = "#FDDA24";
+import { formatBalance } from "@/constants/countries";
 
 const FILTERS = ["Todos", "Ingresos", "Egresos", "Transferencias"];
 
@@ -42,22 +40,16 @@ function formatGroupDate(dateStr: string) {
   });
 }
 
-function formatCOP(amount: number) {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(Math.abs(amount));
-}
-
 export default function MovementsScreen() {
   const { transactions, balanceVisible, accounts } = useApp();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad = Platform.OS === "web" ? 60 : insets.top;
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [selectedAccount, setSelectedAccount] = useState(accounts[0]?.id ?? "");
 
   const account = accounts.find((a) => a.id === selectedAccount) ?? accounts[0];
+  const currencyCode = account?.currencyCode ?? "COP";
+  const currencySymbol = account?.currencySymbol ?? "$";
 
   const filtered = transactions
     .filter((tx) => tx.accountId === selectedAccount)
@@ -69,74 +61,63 @@ export default function MovementsScreen() {
       return true;
     });
 
-  const totalCredits = filtered
-    .filter((t) => t.type === "credit")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalDebits = filtered
-    .filter((t) => t.type === "debit")
-    .reduce((s, t) => s + Math.abs(t.amount), 0);
+  const totalCredits = filtered.filter((t) => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+  const totalDebits = filtered.filter((t) => t.type === "debit").reduce((s, t) => s + Math.abs(t.amount), 0);
 
   const grouped = groupByDate(filtered);
-  const sortedDates = Object.keys(grouped).sort((a, b) =>
-    b.localeCompare(a)
-  );
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  const creditStr = formatBalance(totalCredits, currencyCode, currencySymbol, true);
+  const debitStr = formatBalance(totalDebits, currencyCode, currencySymbol, true);
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Movimientos</Text>
-        <TouchableOpacity style={styles.filterIconBtn}>
-          <Feather name="sliders" size={20} color={C.text} />
+        <TouchableOpacity
+          style={styles.filterIconBtn}
+          onPress={() => Alert.alert("Filtrar", "Selecciona un rango de fechas o categoría para filtrar tus movimientos.")}
+        >
+          <Feather name="sliders" size={20} color="#1C1C1E" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.accountScroll}
-        contentContainerStyle={styles.accountScrollContent}
-      >
-        {accounts.map((acc) => (
-          <TouchableOpacity
-            key={acc.id}
-            style={[
-              styles.accountChip,
-              selectedAccount === acc.id && styles.accountChipActive,
-            ]}
-            onPress={() => setSelectedAccount(acc.id)}
-          >
-            <Text
-              style={[
-                styles.accountChipText,
-                selectedAccount === acc.id && styles.accountChipTextActive,
-              ]}
+      {accounts.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.accountScroll}
+          contentContainerStyle={styles.accountScrollContent}
+        >
+          {accounts.map((acc) => (
+            <TouchableOpacity
+              key={acc.id}
+              style={[styles.accountChip, selectedAccount === acc.id && styles.accountChipActive]}
+              onPress={() => setSelectedAccount(acc.id)}
             >
-              {acc.name}
-            </Text>
-            <Text
-              style={[
-                styles.accountChipNum,
-                selectedAccount === acc.id && styles.accountChipNumActive,
-              ]}
-            >
-              {acc.number}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text style={[styles.accountChipText, selectedAccount === acc.id && styles.accountChipTextActive]}>
+                {acc.name}
+              </Text>
+              <Text style={[styles.accountChipNum, selectedAccount === acc.id && styles.accountChipNumActive]}>
+                {acc.number} · {acc.currencyCode}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Ingresos</Text>
-          <Text style={[styles.summaryValue, styles.summaryCredit]}>
-            {balanceVisible ? `+${formatCOP(totalCredits)}` : "•••••"}
+          <Text style={styles.summaryLabel}>↑ Ingresos</Text>
+          <Text style={[styles.summaryValue, styles.summaryCredit]} numberOfLines={1} adjustsFontSizeToFit>
+            {balanceVisible ? `+${creditStr}` : "•••••"}
           </Text>
         </View>
         <View style={styles.summarySep} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Egresos</Text>
-          <Text style={[styles.summaryValue, styles.summaryDebit]}>
-            {balanceVisible ? `-${formatCOP(totalDebits)}` : "•••••"}
+          <Text style={styles.summaryLabel}>↓ Egresos</Text>
+          <Text style={[styles.summaryValue, styles.summaryDebit]} numberOfLines={1} adjustsFontSizeToFit>
+            {balanceVisible ? `-${debitStr}` : "•••••"}
           </Text>
         </View>
       </View>
@@ -150,18 +131,10 @@ export default function MovementsScreen() {
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f}
-            style={[
-              styles.filterChip,
-              activeFilter === f && styles.filterChipActive,
-            ]}
+            style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
             onPress={() => setActiveFilter(f)}
           >
-            <Text
-              style={[
-                styles.filterChipText,
-                activeFilter === f && styles.filterChipTextActive,
-              ]}
-            >
+            <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>
               {f}
             </Text>
           </TouchableOpacity>
@@ -171,16 +144,17 @@ export default function MovementsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} bounces>
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Feather name="inbox" size={40} color={C.textLight} />
+            <Feather name="inbox" size={40} color="#C0C0C0" />
             <Text style={styles.emptyText}>Sin movimientos</Text>
+            <Text style={styles.emptySubText}>
+              Aquí aparecerán tus transacciones cuando las realices.
+            </Text>
           </View>
         ) : (
           sortedDates.map((date) => (
             <View key={date}>
               <View style={styles.dateHeader}>
-                <Text style={styles.dateHeaderText}>
-                  {formatGroupDate(date)}
-                </Text>
+                <Text style={styles.dateHeaderText}>{formatGroupDate(date)}</Text>
               </View>
               <View style={styles.txGroup}>
                 {grouped[date].map((tx, i) => (
@@ -188,17 +162,17 @@ export default function MovementsScreen() {
                     <TransactionItem
                       transaction={tx}
                       balanceVisible={balanceVisible}
+                      currencyCode={currencyCode}
+                      currencySymbol={currencySymbol}
                     />
-                    {i < grouped[date].length - 1 && (
-                      <View style={styles.divider} />
-                    )}
+                    {i < grouped[date].length - 1 && <View style={styles.divider} />}
                   </React.Fragment>
                 ))}
               </View>
             </View>
           ))
         )}
-        <View style={{ height: Platform.OS === "web" ? 100 : 90 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
     </View>
   );
@@ -211,27 +185,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: C.text,
+    color: "#1C1C1E",
     fontFamily: "Inter_700Bold",
   },
   filterIconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F5F5F7",
     alignItems: "center",
     justifyContent: "center",
   },
   accountScroll: { maxHeight: 72 },
   accountScrollContent: {
     paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 10,
-    paddingBottom: 8,
   },
   accountChip: {
     backgroundColor: "#FFFFFF",
@@ -240,15 +217,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1.5,
     borderColor: "transparent",
-    minWidth: 140,
+    minWidth: 130,
   },
   accountChipActive: {
-    borderColor: C.yellow,
-    backgroundColor: C.yellow + "15",
+    borderColor: "#FDDA24",
+    backgroundColor: "#FDDA2415",
   },
   accountChipText: {
-    fontSize: 12,
-    color: C.textSecondary,
+    fontSize: 11,
+    color: "#9CA3AF",
     fontFamily: "Inter_400Regular",
   },
   accountChipTextActive: {
@@ -258,39 +235,31 @@ const styles = StyleSheet.create({
   accountChipNum: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: C.text,
+    color: "#1C1C1E",
     marginTop: 2,
   },
-  accountChipNumActive: {
-    color: "#1C1C1E",
-  },
+  accountChipNumActive: { color: "#1C1C1E" },
   summaryRow: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
     borderRadius: 14,
     paddingVertical: 14,
-    marginBottom: 12,
-    marginTop: 4,
+    marginTop: 12,
+    marginBottom: 4,
   },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  summarySep: {
-    width: 1,
-    backgroundColor: "#E5E7EB",
-  },
+  summaryItem: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
+  summarySep: { width: 1, backgroundColor: "#E5E7EB" },
   summaryLabel: {
     fontSize: 11,
-    color: C.textSecondary,
+    color: "#9CA3AF",
     fontFamily: "Inter_400Regular",
     marginBottom: 4,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   summaryValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
   },
   summaryCredit: { color: "#10B981" },
@@ -299,11 +268,11 @@ const styles = StyleSheet.create({
   filterContent: {
     paddingHorizontal: 16,
     gap: 8,
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
   filterChip: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -315,7 +284,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 13,
-    color: C.textSecondary,
+    color: "#9CA3AF",
     fontFamily: "Inter_500Medium",
   },
   filterChipTextActive: {
@@ -324,11 +293,12 @@ const styles = StyleSheet.create({
   },
   dateHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingTop: 12,
+    paddingBottom: 6,
   },
   dateHeaderText: {
     fontSize: 12,
-    color: C.textSecondary,
+    color: "#9CA3AF",
     fontFamily: "Inter_600SemiBold",
     textTransform: "capitalize",
     letterSpacing: 0.3,
@@ -338,7 +308,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   divider: {
     height: 1,
@@ -348,11 +318,19 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: "center",
     paddingTop: 60,
-    gap: 12,
+    paddingHorizontal: 40,
+    gap: 8,
   },
   emptyText: {
-    fontSize: 15,
-    color: C.textLight,
+    fontSize: 16,
+    color: "#9CA3AF",
+    fontFamily: "Inter_600SemiBold",
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: "#C0C0C0",
     fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    marginTop: 4,
   },
 });

@@ -1,0 +1,2 @@
+- [Mi Bancolombia currency formatting](mi-bancolombia-currency.md) — formatBalance(amount, code, symbol, showCode) in countries.ts is the canonical formatter; always import from there, never use Intl directly in components.
+- [Mi Bancolombia banks by currency](mi-bancolombia-banks.md) — BANKS_BY_CURRENCY in countries.ts maps currency code → array of real bank names; use getBanksByCountry(countryCode) to get the right list per user country.

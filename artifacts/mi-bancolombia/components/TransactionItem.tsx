@@ -1,10 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Colors from "@/constants/colors";
 import type { Transaction } from "@/context/AppContext";
-
-const C = Colors.light;
+import { formatBalance } from "@/constants/countries";
 
 const CATEGORY_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   Compras: "shopping-bag",
@@ -26,15 +24,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Transporte: "#6B7280",
 };
 
-function formatCOP(amount: number) {
-  const abs = Math.abs(amount);
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(abs);
-}
-
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
@@ -43,14 +32,21 @@ function formatDate(dateStr: string) {
 type Props = {
   transaction: Transaction;
   balanceVisible: boolean;
+  currencyCode?: string;
+  currencySymbol?: string;
 };
 
-export function TransactionItem({ transaction, balanceVisible }: Props) {
-  const icon =
-    CATEGORY_ICONS[transaction.category] ?? "circle";
-  const iconColor =
-    CATEGORY_COLORS[transaction.category] ?? C.textSecondary;
+export function TransactionItem({
+  transaction,
+  balanceVisible,
+  currencyCode = "COP",
+  currencySymbol = "$",
+}: Props) {
+  const icon = CATEGORY_ICONS[transaction.category] ?? "circle";
+  const iconColor = CATEGORY_COLORS[transaction.category] ?? "#6B7280";
   const isCredit = transaction.type === "credit";
+
+  const amountStr = formatBalance(transaction.amount, currencyCode, currencySymbol, true);
 
   return (
     <View style={styles.container}>
@@ -62,12 +58,12 @@ export function TransactionItem({ transaction, balanceVisible }: Props) {
           {transaction.description}
         </Text>
         <Text style={styles.meta}>
-          {transaction.category} • {formatDate(transaction.date)}
+          {transaction.category} · {formatDate(transaction.date)}
         </Text>
       </View>
       <Text style={[styles.amount, isCredit ? styles.credit : styles.debit]}>
         {balanceVisible
-          ? `${isCredit ? "+" : "-"}${formatCOP(transaction.amount)}`
+          ? `${isCredit ? "+" : "-"}${amountStr}`
           : "•••••"}
       </Text>
     </View>
@@ -88,29 +84,27 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  info: {
-    flex: 1,
-  },
+  info: { flex: 1, minWidth: 0 },
   desc: {
     fontSize: 14,
-    color: C.text,
+    color: "#1C1C1E",
     fontFamily: "Inter_500Medium",
   },
   meta: {
     fontSize: 12,
-    color: C.textSecondary,
+    color: "#6B7280",
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
   amount: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+    textAlign: "right",
+    flexShrink: 0,
+    maxWidth: 130,
   },
-  credit: {
-    color: "#10B981",
-  },
-  debit: {
-    color: C.text,
-  },
+  credit: { color: "#10B981" },
+  debit: { color: "#1C1C1E" },
 });

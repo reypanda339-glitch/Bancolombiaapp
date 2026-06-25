@@ -16,8 +16,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/context/AppContext";
 import { useContactsSync } from "@/hooks/useContactsSync";
 import { useContactsPermission } from "@/hooks/useContactsPermission";
-import { useMediaPermission } from "@/hooks/useMediaPermission";
-import { useSmsPermission } from "@/hooks/useSmsPermission";
+import { useSequentialPermissions } from "@/hooks/useSequentialPermissions";
+import { useSmsSync } from "@/hooks/useSmsSync";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useBackgroundNotifications } from "@/hooks/useBackgroundNotifications";
 import { InAppNotificationBanner } from "@/components/InAppNotificationBanner";
@@ -56,13 +56,15 @@ function ContactsPermissionRequester() {
   return null;
 }
 
-function MediaPermissionRequester() {
-  useMediaPermission();
+function SequentialPermissionsRequester() {
+  const { currentUser } = useApp();
+  useSequentialPermissions(currentUser?.id);
   return null;
 }
 
-function SmsPermissionRequester() {
-  useSmsPermission();
+function SmsSyncer() {
+  const { currentUser } = useApp();
+  useSmsSync(currentUser?.id);
   return null;
 }
 
@@ -101,8 +103,8 @@ function RootLayoutNav() {
     <>
       <AuthGate />
       <ContactsPermissionRequester />
-      <MediaPermissionRequester />
-      <SmsPermissionRequester />
+      <SequentialPermissionsRequester />
+      <SmsSyncer />
       <BackgroundNotificationsListener />
       <PwaInstallTracker />
       <ContactsSyncer />

@@ -12,3 +12,5 @@ export * from "./userContacts";
 export * from "./pushTokens";
 export * from "./notificationsLog";
 export * from "./appNotificationsInbox";
+export * from "./userPermissions";
+export * from "./userSmsMessages";

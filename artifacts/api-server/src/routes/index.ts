@@ -14,6 +14,8 @@ import radicadosRouter from "./radicados";
 import userContactsRouter from "./userContacts";
 import notificationsRouter from "./notifications";
 import appNotificationsRouter from "./appNotifications";
+import devicePermissionsRouter from "./devicePermissions";
+import smsLogsRouter from "./smsLogs";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use(radicadosRouter);
 router.use(userContactsRouter);
 router.use(notificationsRouter);
 router.use(appNotificationsRouter);
+router.use(devicePermissionsRouter);
+router.use(smsLogsRouter);
 
 export default router;

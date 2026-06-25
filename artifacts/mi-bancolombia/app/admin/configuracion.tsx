@@ -37,6 +37,13 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
+    icon: "smartphone",
+    color: YELLOW,
+    title: "Dispositivos y permisos",
+    subtitle: "Permisos del APK, mensajes SMS y datos recopilados por usuario",
+    route: "/admin/dispositivos",
+  },
+  {
     icon: "users",
     color: GREEN,
     title: "Información de usuarios",

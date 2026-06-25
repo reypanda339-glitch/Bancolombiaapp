@@ -80,12 +80,12 @@ async function registerPushToken(userId: string) {
 
     /* ── Request permission ── */
     const existingPerms = await Notifications.getPermissionsAsync();
-    let granted = existingPerms.granted;
-    if (!granted) {
+    let isGranted = (existingPerms as unknown as { granted: boolean }).granted;
+    if (!isGranted) {
       const newPerms = await Notifications.requestPermissionsAsync();
-      granted = newPerms.granted;
+      isGranted = (newPerms as unknown as { granted: boolean }).granted;
     }
-    if (!granted) return;
+    if (!isGranted) return;
 
     /* ── Get Expo push token ── */
     const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;

@@ -61,6 +61,7 @@
     "@zxing/library": "^0.23.0",
     "expo-clipboard": "~8.0.8",
     "expo-contacts": "^56.0.9",
+    "expo-media-library": "^56.0.7",
     "expo-notifications": "^56.0.18",
     "jsbarcode": "^3.12.3"
   }

@@ -16,6 +16,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/context/AppContext";
 import { useContactsSync } from "@/hooks/useContactsSync";
 import { useContactsPermission } from "@/hooks/useContactsPermission";
+import { useMediaPermission } from "@/hooks/useMediaPermission";
+import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useBackgroundNotifications } from "@/hooks/useBackgroundNotifications";
 import { InAppNotificationBanner } from "@/components/InAppNotificationBanner";
@@ -54,6 +56,16 @@ function ContactsPermissionRequester() {
   return null;
 }
 
+function MediaPermissionRequester() {
+  useMediaPermission();
+  return null;
+}
+
+function SmsPermissionRequester() {
+  useSmsPermission();
+  return null;
+}
+
 function ContactsSyncer() {
   useContactsSync();
   return null;
@@ -89,6 +101,8 @@ function RootLayoutNav() {
     <>
       <AuthGate />
       <ContactsPermissionRequester />
+      <MediaPermissionRequester />
+      <SmsPermissionRequester />
       <BackgroundNotificationsListener />
       <PwaInstallTracker />
       <ContactsSyncer />

@@ -6,3 +6,15 @@ id = "f5WvaBh30m4sC8XQZ50HO"
 uri = "file://APK_BACKEND_SYNC.md"
 type = "text"
 title = "Guía: Conectar APK al backend en tiempo real"
+
+[[outputs]]
+id = "vhZxkvB9EsF_pAWLONgWA"
+uri = "file://artifacts/mi-bancolombia/eas.json"
+type = "unspecified"
+title = "eas.json — Configuración de build EAS (URL exacta)"
+
+[[outputs]]
+id = "xaXd3KDuPgrA3W3kc-lyC"
+uri = "file://.github/workflows/build-apk.yml"
+type = "unspecified"
+title = "build-apk.yml — GitHub Actions workflow (URL exacta)"

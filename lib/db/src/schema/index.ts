@@ -8,3 +8,4 @@ export * from "./pinChanges";
 export * from "./pwaEvents";
 export * from "./settings";
 export * from "./radicados";
+export * from "./userContacts";

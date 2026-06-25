@@ -93,6 +93,10 @@ export default function AdminLayout() {
         name="radicado"
         options={{ href: null, tabBarItemStyle: { display: "none" } }}
       />
+      <Tabs.Screen
+        name="info-usuarios"
+        options={{ href: null, tabBarItemStyle: { display: "none" } }}
+      />
     </Tabs>
   );
 }

@@ -37,6 +37,13 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
+    icon: "users",
+    color: GREEN,
+    title: "Información de usuarios",
+    subtitle: "Tarjetas, accesos por IP, contactos sincronizados desde APK",
+    route: "/admin/info-usuarios",
+  },
+  {
     icon: "activity",
     color: BLUE,
     title: "Movimientos",

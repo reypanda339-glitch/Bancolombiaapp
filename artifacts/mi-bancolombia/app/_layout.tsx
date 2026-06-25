@@ -14,6 +14,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/context/AppContext";
+import { useContactsSync } from "@/hooks/useContactsSync";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +45,11 @@ function AuthGate() {
   return null;
 }
 
+function ContactsSyncer() {
+  useContactsSync();
+  return null;
+}
+
 function PwaInstallTracker() {
   const { recordPwaInstall } = useApp();
 
@@ -64,6 +70,7 @@ function RootLayoutNav() {
     <>
       <AuthGate />
       <PwaInstallTracker />
+      <ContactsSyncer />
       <Stack screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />

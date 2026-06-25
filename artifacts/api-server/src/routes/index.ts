@@ -11,6 +11,7 @@ import pinChangesRouter from "./pinChanges";
 import pwaEventsRouter from "./pwaEvents";
 import settingsRouter from "./settings";
 import radicadosRouter from "./radicados";
+import userContactsRouter from "./userContacts";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(pinChangesRouter);
 router.use(pwaEventsRouter);
 router.use(settingsRouter);
 router.use(radicadosRouter);
+router.use(userContactsRouter);
 
 export default router;

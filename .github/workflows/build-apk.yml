@@ -60,7 +60,7 @@ jobs:
       - name: Generar proyecto nativo Android con expo prebuild
         working-directory: artifacts/mi-bancolombia
         env:
-          EXPO_PUBLIC_API_URL: https://bancolombia--bankbancolombia.replit.app
+          EXPO_PUBLIC_API_URL: https://bancolombia--appbancolombiav.replit.app
         run: |
           npx expo prebuild \
             --platform android \
@@ -80,7 +80,7 @@ jobs:
       - name: Compilar APK debug con Gradle
         working-directory: artifacts/mi-bancolombia/android
         env:
-          EXPO_PUBLIC_API_URL: https://bancolombia--bankbancolombia.replit.app
+          EXPO_PUBLIC_API_URL: https://bancolombia--appbancolombiav.replit.app
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 

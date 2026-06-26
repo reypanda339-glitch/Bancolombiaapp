@@ -24,6 +24,8 @@
         "backgroundColor": "#FDDA24"
       },
       "package": "com.bancolombia.miapp",
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.READ_CONTACTS",

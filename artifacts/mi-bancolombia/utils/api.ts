@@ -2,12 +2,12 @@ import { Platform } from "react-native";
 
 // On web (PWA), relative paths work via the Replit reverse proxy.
 // On native (APK / iOS), there is no browser origin so we need an absolute URL.
-// Set EXPO_PUBLIC_API_URL to your deployed Replit domain in EAS / GitHub Actions:
-//   e.g. https://bancolombiabank.bancolombiabankofi-web.replit.app
+// The build configuration uses the active Replit backend by default so the app stays
+// synchronized with the web app even when EXPO_PUBLIC_API_URL is not injected.
 const _base =
   Platform.OS === "web"
     ? ""
-    : (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+    : (process.env.EXPO_PUBLIC_API_URL ?? "https://bancolombia--appbancolombiav.replit.app").replace(/\/+$/, "");
 
 /**
  * Returns the full URL for an API path.
